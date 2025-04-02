@@ -1,0 +1,44 @@
+{
+  "/ai": {
+    "post": {
+      "x-mojo-to": "Com::BibLibre::LLMSearch#send_request_openai",
+      "description": "Called by javascript, transmits request to openai",
+      "operationId": "send_request_openai",
+      },
+      "parameters": [
+                {
+                    "name": "request",
+                    "in": "body",
+                    "description": "a request in natural language",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        }
+                    }
+      ],
+      "produces": [
+        "application/json"
+      ],
+      "responses": {
+        "200": {
+          "description": "reply from LLM",
+          "schema": {
+              "type": "string"
+          }
+        },
+        "404": {
+          "description": "An error occured",
+          "schema": {
+              "type": "object",
+                "properties": {
+                  "error": {
+                    "description": "An explanation for the error",
+                    "type": "string"
+                  }
+                }
+          }
+        }
+      }
+  }
+}
+

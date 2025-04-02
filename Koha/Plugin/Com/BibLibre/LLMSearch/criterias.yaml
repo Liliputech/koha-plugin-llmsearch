@@ -1,0 +1,28 @@
+kw:Keyword
+kw,phr:Keyword as phrase
+au:Author
+au,phr:Author as phrase
+cpn:Corporate name
+cfn:Conference name
+cpn,phr:Corporate name as phrase
+cfn,phr:Conference name as phrase
+pn:Personal name
+pn,phr:Personal name as phrase
+ti:Title
+ti,phr:Title as phrase
+se:Series title
+su:Subject
+su,phr:Subject as phrase
+bc:Barcode
+location,wrdl:Shelving location (code)
+ident:Standard number
+nb:ISBN
+ns:ISSN
+callnum:Call number
+ln,rtrn:Language
+nt:Notes/Comments
+curriculum:Curriculum
+pb:Publisher
+pl:Publisher location
+yr,st-year:Publication date (yyyy-yyyy)
+acqdate,st-date-normalized:Acquisition date (yyyy-mm-dd)

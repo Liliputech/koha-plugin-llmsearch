@@ -1,0 +1,23 @@
+[% USE KohaDates %]
+[% INCLUDE 'doc-head-open.inc' %]
+ <title>LLMSearch Plugin Configuration</title>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+<body>
+[% INCLUDE 'header.inc' %]
+[% INCLUDE 'cat-search.inc' %]
+
+<div id="breadcrumbs"><a href="/cgi-bin/koha/mainpage.pl">Home</a> &rsaquo; <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a> &rsaquo; LLMSearch &rsaquo; Configuration</div>
+
+<div id="doc3">
+    <h3>LLMSearch: Configuration</h3>
+    	<form method="get">
+        <input type="hidden" name="class" value="[% CLASS %]"/>
+        <input type="hidden" name="method" value="[% METHOD %]"/>
+        <input type="text" name="base_url" value=""/>
+	<input type="text" name="api_key" required="true" value=""/>
+        <input type="text" name="model" required="true" value=""/>
+        <input type="hidden" name="save" value="1" />
+        <input type="submit" value="Save configuration" />
+	</form>
+[% INCLUDE 'intranet-bottom.inc' %]
