@@ -1,44 +1,43 @@
 {
-  "/ai": {
+  "/chat": {
     "post": {
-      "x-mojo-to": "Com::BibLibre::LLMSearch#send_request_openai",
-      "description": "Called by javascript, transmits request to openai",
-      "operationId": "send_request_openai",
-      },
+      "x-mojo-to": "Com::BibLibre::LLMSearch::Controller#chat",
+      "description": "Called by javascript and transmits request to openai",
+      "operationId": "chatWithLLM",
+      "tags": [
+        "opac"
+      ],
       "parameters": [
-                {
-                    "name": "request",
-                    "in": "body",
-                    "description": "a request in natural language",
-                    "required": true,
-                    "schema": {
-                        "type": "string",
-                        }
-                    }
+        {
+          "name": "query",
+          "in": "body",
+          "description": "a query in natural language",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
       ],
       "produces": [
         "application/json"
       ],
       "responses": {
         "200": {
-          "description": "reply from LLM",
-          "schema": {
-              "type": "string"
-          }
+          "description": "reply from LLM"
         },
-        "404": {
+        "500": {
           "description": "An error occured",
           "schema": {
-              "type": "object",
-                "properties": {
-                  "error": {
-                    "description": "An explanation for the error",
-                    "type": "string"
-                  }
-                }
+            "type": "object",
+            "properties": {
+              "error": {
+                "description": "An explanation for the error",
+                "type": "string"
+              }
+            }
           }
         }
       }
+    }
   }
 }
-

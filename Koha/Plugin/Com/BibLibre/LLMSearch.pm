@@ -5,29 +5,21 @@ use Modern::Perl;
 
 ## Required for all plugins
 use base qw(Koha::Plugins::Base);
-use OpenAI::API;
-
-## We will also need to include any Koha libraries we want to access
-use C4::Context;
-
-use Koha::DateUtils qw( dt_from_string );
-
-use Data::Dumper;
+use Template;
 use Mojo::JSON qw(decode_json);
-use URI::Escape qw(uri_unescape);
-use HTTP::Request;
-use Scalar::Util qw(refaddr);
+use Data::Dumper;
+
 
 ## Here we set our plugin version
 our $VERSION = "1";
-our $MINIMUM_VERSION = "22.11";
+our $MINIMUM_VERSION = "23.11";
 
 ## Here is our metadata, some keys are required, some are optional
 our $metadata = {
     name            => 'LLM Search',
     author          => 'A. Suzuki',
-    date_authored   => '2024-10-26',
-    date_updated    => "2024-10-26",
+    date_authored   => '2025-05-26',
+    date_updated    => "2025-05-26",
     minimum_version => $MINIMUM_VERSION,
     maximum_version => undef,
     version         => $VERSION,
@@ -57,27 +49,6 @@ sub install {
     return 1;
 }
 
-sub send_request_openai {
-   my ($self, $search_query) = @_;
-   my $api_key = $self->retrieve_data('api_key');
-   # Custom base URL
-   my $base_url = $self->retrieve_data('base_url');
-
-   # Create a new OpenAI::API object with custom base_url
-   my $openai = OpenAI::API->new(
-       	config => { api_key   => $api_key,
-	            api_base  => $custom_base_url,
-        });
-
-   my $res = $openai->chat(
-       messages => [
-	   {"role" => "system", "content" => ""},
-	   {"role" => "user",   "content" => $search_query },
-       ]);
-
-   return $res;
-}
-
 sub configure {
     my ( $self, $args ) = @_;
     my $cgi = $self->{'cgi'};
@@ -94,9 +65,9 @@ sub configure {
     else {
         $self->store_data(
             {
-                base_url           => $cgi->param('base_url') // 'https://api.openai.com/v1/',
+                base_url           => $cgi->param('base_url') // 'https://api.mistral.ai/v1/',
                 api_key            => $cgi->param('api_key'),
-		model              => $cgi->param('model'),
+		model              => $cgi->param('model') // 'mistral-large-latest',
                 last_configured_by => C4::Context->userenv->{'number'},
             }
         );

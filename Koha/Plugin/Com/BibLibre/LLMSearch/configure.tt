@@ -14,10 +14,21 @@
     	<form method="get">
         <input type="hidden" name="class" value="[% CLASS %]"/>
         <input type="hidden" name="method" value="[% METHOD %]"/>
-        <input type="text" name="base_url" value=""/>
-	<input type="text" name="api_key" required="true" value=""/>
-        <input type="text" name="model" required="true" value=""/>
+	<div>
+	<label for="api_key">Your Mistral API Key</label>
+	<input type="text" name="api_key" required="true" value="[% api_key %]"/>
+	</div>
+	<div>
+	<label for="model">Optional : Model to use</label>
+	<input type="text" name="model" value="[% model %]"/>
+	</div>
+	<div>
+	<label for="base_url">Optional : AI Base URL</label>
+	<input type="text" name="base_url" value="[% base_url %]"/>
+	</div>
+	<div>
         <input type="hidden" name="save" value="1" />
         <input type="submit" value="Save configuration" />
+	</div>
 	</form>
 [% INCLUDE 'intranet-bottom.inc' %]
