@@ -75,6 +75,12 @@ sub configure {
     }
 }
 
+sub opac_js {
+    my ( $self ) = @_;
+    my $js = $self->mbf_read('chat.js');
+    return '<script>' . $js . '</script>';
+}
+
 sub api_routes {
     my ( $self, $args ) = @_;
     my $spec_str;

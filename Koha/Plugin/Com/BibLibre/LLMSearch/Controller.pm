@@ -10,8 +10,8 @@ use HTTP::Request;
 use HTTP::Response;
 use Data::Dumper;
 
-my $base_url = ''; # Replace with actual Mistral API endpoint
-my $api_key = ''; # Replace with your API key
+my $base_url = '';
+my $api_key = '';
 my $model = '';
 my $user_agent = LWP::UserAgent->new;
 $user_agent->agent("KohaLLMSearch");
