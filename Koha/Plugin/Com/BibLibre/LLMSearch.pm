@@ -81,11 +81,26 @@ sub opac_js {
     return '<script>' . $js . '</script>';
 }
 
+sub opac_head {
+    my ( $self ) = @_;
+    my $css = $self->mbf_read('chat.css');
+    return '<style>' . $css . '</style>';
+}
+
 sub api_routes {
     my ( $self, $args ) = @_;
     my $spec_str;
     $spec_str = $self->mbf_read('openapi.json');
     my $spec = decode_json($spec_str);
+    return $spec;
+}
+
+sub static_routes {
+    my ( $self, $args ) = @_;
+
+    my $spec_str = $self->mbf_read('staticapi.json');
+    my $spec     = decode_json($spec_str);
+
     return $spec;
 }
 

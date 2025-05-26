@@ -1,0 +1,97 @@
+.chat-popup {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    right: 15px;
+    border: 3px solid #f1f1f1;
+    z-index: 9;
+}
+
+.chat-container {
+    max-width: 650px;
+    padding: 10px;
+    background-color: white;
+}
+
+.chat-container input {
+    width: 100%;
+    padding: 5px;
+    border: none;
+    background: #f1f1f1;
+}
+
+.chat-container input:focus {
+    background-color: #ddd;
+    outline: none;
+}
+
+.chat-container div.chat-controls {
+    float: right;
+    width: -moz-available;
+}
+
+.chat-container .btn {
+    background-color: #04AA6D;
+    color: white;
+}
+
+.chat-container .cancel {
+    background-color: red;
+}
+
+.chat-container div.chat-messages {
+    overflow: auto;
+    max-height: 100vh;
+}
+
+.chat-container div.message {
+    border-radius: 5px;
+    margin-bottom: 5px;
+    padding: 15px;
+    display: inline-block;
+}
+
+.chat-container div.user {
+    float:left;
+    text-align:left;
+    background-color: lightgreen;
+}
+
+.chat-container div.robot {
+    float:right;
+    text-align:right;
+    background-color: lightgray;
+}
+
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading-dots span {
+  font-size: 24px;
+  opacity: 0;
+  animation: dotAnimation 1.5s infinite;
+}
+
+.loading-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.5s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 1s;
+}
+
+@keyframes dotAnimation {
+  0%, 100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
