@@ -55,9 +55,10 @@ sub configure {
     unless ($cgi->param('save')) {
 	my $template = $self->get_template({ file => 'configure.tt' });
 	$template->param(
-	    base_url => $self->retrieve_data('base_url'),
-	    api_key => $self->retrieve_data('api_key'),
-	    model => $self->retrieve_data('model'),
+	    base_url      => $self->retrieve_data('base_url'),
+	    api_key       => $self->retrieve_data('api_key'),
+	    model         => $self->retrieve_data('model'),
+	    system_prompt => $self->retrieve_data('system_prompt'),
 	);
 
 	$self->output_html( $template->output() );
@@ -67,7 +68,8 @@ sub configure {
             {
                 base_url           => $cgi->param('base_url') // 'https://api.mistral.ai/v1/',
                 api_key            => $cgi->param('api_key'),
-		model              => $cgi->param('model') // 'mistral-large-latest',
+		model              => $cgi->param('model') // 'mistral-small-latest',
+		system_prompt      => $cgi->param('system_prompt'),
                 last_configured_by => C4::Context->userenv->{'number'},
             }
         );

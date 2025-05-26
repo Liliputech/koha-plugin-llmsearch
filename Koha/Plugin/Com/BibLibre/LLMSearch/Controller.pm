@@ -10,19 +10,17 @@ use HTTP::Request;
 use HTTP::Response;
 use Data::Dumper;
 
-my $base_url = '';
-my $api_key = '';
-my $model = '';
-my $user_agent = LWP::UserAgent->new;
-$user_agent->agent("KohaLLMSearch");
-
 sub chat {
     my $c = shift->openapi->valid_input or return;
 
-    my $plugin = Koha::Plugin::Com::BibLibre::LLMSearch->new();
-    $api_key  = $plugin->retrieve_data('api_key');
-    $base_url = $plugin->retrieve_data('base_url');
-    $model =  $plugin->retrieve_data('model');
+    my $plugin   = Koha::Plugin::Com::BibLibre::LLMSearch->new();
+    my $api_key  = $plugin->retrieve_data('api_key');
+    my $base_url = $plugin->retrieve_data('base_url');
+    my $model    =  $plugin->retrieve_data('model');
+    my $prompt   = $plugin->mbf_read('system_prompt.txt');
+
+    my $user_agent = LWP::UserAgent->new;
+    $user_agent->agent("KohaLLMSearch");
 
     my $user_query = $c->validation->param('query');
     my $url = $base_url . "chat/completions";
@@ -32,14 +30,14 @@ sub chat {
     my $chat = {
         model => $model,
 	messages => [
-	    {"role" => "system", "content" => ""},
-	    {"role" => "user",   "content" => $user_query },
+	    { "role" => "system", "content" => $prompt },
+	    { "role" => "user",   "content" => $user_query },
 	    ]};
     
     my $req = HTTP::Request->new('POST', $url, $header, encode_json($chat));
     my $response = $user_agent->request($req);
 
-    if ($response->is_success) {
+    if ( $response->is_success ) {
         return $c->render(
 	    status => 200,
 	    openapi => decode_json($response->decoded_content)

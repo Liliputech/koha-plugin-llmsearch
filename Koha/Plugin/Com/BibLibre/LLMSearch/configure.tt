@@ -11,13 +11,16 @@
 
 <div id="doc3">
     <h3>LLMSearch: Configuration</h3>
-    	<form method="get">
+    	<form method="post">
         <input type="hidden" name="class" value="[% CLASS %]"/>
         <input type="hidden" name="method" value="[% METHOD %]"/>
 	<div>
 	<label for="api_key">Your Mistral API Key</label>
 	<input type="text" name="api_key" required="true" value="[% api_key %]"/>
 	</div>
+	<div>
+	<label for="system_prompt">System Prompt</label>
+	<textarea type="text" name="system_prompt" value="[% system_prompt %]"></textarea>
 	<div>
 	<label for="model">Optional : Model to use</label>
 	<input type="text" name="model" value="[% model %]"/>

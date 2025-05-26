@@ -32,7 +32,7 @@ function askAI() {
 
     addMessage('robot', '<div class="loading-dots"><span>.</span><span>.</span><span>.</span></div>');
 
-    chatWindow.scrollTop(chatWindow.scrollHeight);
+    chatWindow.scrollTop(chatWindow[0].scrollHeight);
     ///*
     $.post('/api/v1/contrib/llmsearch/chat', { input: inputValue }, function(data) {
         console.log(data);
