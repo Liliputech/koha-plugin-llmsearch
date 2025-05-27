@@ -19,35 +19,40 @@ sub chat {
     my $model    =  $plugin->retrieve_data('model');
     my $prompt   = $plugin->mbf_read('system_prompt.txt');
 
+    return $c->render(
+        status => 500,
+        openapi => { error => "missing configuration" }
+        ) unless $api_key and $base_url and $model;
+
     my $user_agent = LWP::UserAgent->new;
     $user_agent->agent("KohaLLMSearch");
 
     my $user_query = $c->validation->param('query');
     my $url = $base_url . "chat/completions";
     my $header = ['Content-Type' => 'application/json',
-		  'Accept' => 'application/json',
-		  'Authorization' => 'Bearer ' . $api_key];
+                  'Accept' => 'application/json',
+                  'Authorization' => 'Bearer ' . $api_key];
+
     my $chat = {
         model => $model,
-	messages => [
-	    { "role" => "system", "content" => $prompt },
-	    { "role" => "user",   "content" => $user_query },
-	    ]};
+        messages => [
+            { "role" => "system", "content" => $prompt },
+            { "role" => "user",   "content" => $user_query },
+            ]};
     
     my $req = HTTP::Request->new('POST', $url, $header, encode_json($chat));
     my $response = $user_agent->request($req);
 
     if ( $response->is_success ) {
         return $c->render(
-	    status => 200,
-	    openapi => decode_json($response->decoded_content)
-	    );
+            status => 200,
+            openapi => decode_json($response->decoded_content)
+            );
     }
-    else {
-        return $c->render(
-	    status => 500,
-	    openapi => { error => $response->decoded_content }
-	    );
-    }
+
+    return $c->render(
+        status => 500,
+        openapi => { error => $response->decoded_content }
+        );
 }
 1;

@@ -33,7 +33,6 @@ function askAI() {
     addMessage('robot', '<div class="loading-dots"><span>.</span><span>.</span><span>.</span></div>');
 
     chatWindow.scrollTop(chatWindow[0].scrollHeight);
-    ///*
     $.post('/api/v1/contrib/llmsearch/chat', { input: inputValue }, function(data) {
         console.log(data);
         if (data.choices && data.choices.length > 0) {
@@ -41,8 +40,9 @@ function askAI() {
             $('div.chat-messages div.robot:last p').html(content);
             chatWindow.scrollTop(chatWindow[0].scrollHeight);
         }
+    }).fail(function() {
+	alert( "AJAX error, check the plugin configuration or javascript console" );
     });
-    //*/
 }
 
 function addMessage(type, content) {
