@@ -30,15 +30,6 @@
     width: -moz-available;
 }
 
-.chat-container .btn {
-    background-color: #04AA6D;
-    color: white;
-}
-
-.chat-container .cancel {
-    background-color: red;
-}
-
 .chat-container div.chat-messages {
     overflow: auto;
     max-height: 100vh;

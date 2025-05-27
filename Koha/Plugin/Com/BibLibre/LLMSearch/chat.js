@@ -5,6 +5,7 @@ $(document).ready(function() {
         .then(response => response.text())
         .then(html => {
             $('body').append(html);
+	    populateChat();
             $('form.chat-container').on('submit', function(event) {
                 event.preventDefault();
                 askAI();
@@ -30,7 +31,7 @@ function askAI() {
     addMessage('user', inputValue);
     chatInput.val('');
 
-    addMessage('robot', '<div class="loading-dots"><span>.</span><span>.</span><span>.</span></div>');
+    addMessage('robot', '<div class="loading-dots"><span>.</span><span>.</span><span>.</span></div>', 0);
 
     chatWindow.scrollTop(chatWindow[0].scrollHeight);
     $.post('/api/v1/contrib/llmsearch/chat', { input: inputValue }, function(data) {
@@ -39,6 +40,7 @@ function askAI() {
             const content = data.choices[0].message.content;
 	    const clean = DOMPurify.sanitize(content);
             $('div.chat-messages div.robot:last p').html(clean);
+	    saveMessage('robot', clean);
             chatWindow.scrollTop(chatWindow[0].scrollHeight);
         }
     }).fail(function() {
@@ -46,7 +48,7 @@ function askAI() {
     });
 }
 
-function addMessage(type, content) {
+function addMessage(type, content, save=1) {
     var messageDiv = $('<div>', { 'class': 'message ' + type });
 
     var icon = $('<i>', { 'class': 'fa-solid fa-' + type });
@@ -55,4 +57,36 @@ function addMessage(type, content) {
     messageDiv.append(icon);
     messageDiv.append(paragraph);
     $('div.chat-messages').append(messageDiv);
+    if (save) saveMessage(type, content);
+}
+
+function saveMessage(type, content) {
+    var current_chat = sessionStorage.getItem("current_chat");
+    if (current_chat === null) {
+	current_chat = [];
+    }
+    else {
+	current_chat = JSON.parse(current_chat);
+    }
+    const message = {type:type, content:content};
+    current_chat.push(message);
+    sessionStorage.setItem("current_chat", JSON.stringify(current_chat));
+}
+
+function populateChat() {
+    var current_chat = sessionStorage.getItem("current_chat");
+    if (current_chat === null) {
+	current_chat = [];
+    }
+    else {
+	current_chat = JSON.parse(current_chat);
+    }
+    current_chat.forEach(item => {
+	addMessage(item.type, item.content, 0);
+    });
+}
+
+function resetChat() {
+    sessionStorage.removeItem("current_chat");
+    $('div.chat-messages').children().slice(1).remove();
 }
