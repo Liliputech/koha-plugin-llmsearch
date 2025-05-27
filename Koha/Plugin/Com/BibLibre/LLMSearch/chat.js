@@ -36,8 +36,9 @@ function askAI() {
     $.post('/api/v1/contrib/llmsearch/chat', { input: inputValue }, function(data) {
         console.log(data);
         if (data.choices && data.choices.length > 0) {
-            var content = data.choices[0].message.content;
-            $('div.chat-messages div.robot:last p').html(content);
+            const content = data.choices[0].message.content;
+	    const clean = DOMPurify.sanitize(content);
+            $('div.chat-messages div.robot:last p').html(clean);
             chatWindow.scrollTop(chatWindow[0].scrollHeight);
         }
     }).fail(function() {

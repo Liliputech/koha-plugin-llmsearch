@@ -79,8 +79,8 @@ sub configure {
 
 sub opac_js {
     my ( $self ) = @_;
-    my $js = $self->mbf_read('chat.js');
-    return '<script>' . $js . '</script>';
+    return '<script>' . $self->mbf_read('purify.min.js') . '</script>'
+	 . '<script>' . $self->mbf_read('chat.js') . '</script>';
 }
 
 sub opac_head {
