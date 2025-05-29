@@ -79,7 +79,7 @@ sub configure {
 
 sub opac_js {
     my ( $self ) = @_;
-    return '<script>' . $self->mbf_read('purify.min.js') . '</script>'
+    return '<script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>'
 	 . '<script>' . $self->mbf_read('chat.js') . '</script>';
 }
 
