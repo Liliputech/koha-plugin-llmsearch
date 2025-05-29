@@ -48,7 +48,7 @@
     background-color: lightgreen;
 }
 
-.chat-container div.robot {
+.chat-container div.assistant {
     float:right;
     text-align:right;
     background-color: lightgray;

@@ -31,16 +31,16 @@ function askAI() {
     addMessage('user', inputValue);
     chatInput.val('');
 
-    addMessage('robot', '<div class="loading-dots"><span>.</span><span>.</span><span>.</span></div>', 0);
+    addMessage('assistant', '<div class="loading-dots"><span>.</span><span>.</span><span>.</span></div>', 0);
 
     chatWindow.scrollTop(chatWindow[0].scrollHeight);
-    $.post('/api/v1/contrib/llmsearch/chat', { input: inputValue }, function(data) {
+    $.post('/api/v1/contrib/llmsearch/chat', { json : sessionStorage.getItem('current_chat') }, function(data) {
         console.log(data);
         if (data.choices && data.choices.length > 0) {
             const content = data.choices[0].message.content;
 	    const clean = DOMPurify.sanitize(content);
-            $('div.chat-messages div.robot:last p').html(clean);
-	    saveMessage('robot', clean);
+            $('div.chat-messages div.assistant:last p').html(clean);
+	    saveMessage('assistant', clean);
             chatWindow.scrollTop(chatWindow[0].scrollHeight);
         }
     }).fail(function() {
@@ -48,19 +48,20 @@ function askAI() {
     });
 }
 
-function addMessage(type, content, save=1) {
-    var messageDiv = $('<div>', { 'class': 'message ' + type });
+function addMessage(role, content, save=1) {
+    icon = role == 'assistant' ? 'robot' : 'user' ;
+    var messageDiv = $('<div>', { 'class': 'message ' + role });
 
-    var icon = $('<i>', { 'class': 'fa-solid fa-' + type });
+    var icon = $('<i>', { 'class': 'fa-solid fa-' + icon });
 
     var paragraph = $('<p>').html( content );
     messageDiv.append(icon);
     messageDiv.append(paragraph);
     $('div.chat-messages').append(messageDiv);
-    if (save) saveMessage(type, content);
+    if (save) saveMessage(role, content);
 }
 
-function saveMessage(type, content) {
+function saveMessage(role, content) {
     var current_chat = sessionStorage.getItem("current_chat");
     if (current_chat === null) {
 	current_chat = [];
@@ -68,7 +69,7 @@ function saveMessage(type, content) {
     else {
 	current_chat = JSON.parse(current_chat);
     }
-    const message = {type:type, content:content};
+    const message = {role:role, content:content};
     current_chat.push(message);
     sessionStorage.setItem("current_chat", JSON.stringify(current_chat));
 }
@@ -82,7 +83,7 @@ function populateChat() {
 	current_chat = JSON.parse(current_chat);
     }
     current_chat.forEach(item => {
-	addMessage(item.type, item.content, 0);
+	addMessage(item.role, item.content, 0);
     });
 }
 

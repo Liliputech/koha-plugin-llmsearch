@@ -9,9 +9,9 @@
       ],
       "parameters": [
         {
-          "name": "query",
+          "name": "json",
           "in": "body",
-          "description": "a query in natural language",
+          "description": "a chat history formatted in json",
           "required": true,
           "schema": {
             "type": "string"
