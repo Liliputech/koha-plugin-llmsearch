@@ -59,6 +59,7 @@ sub configure {
 	    api_key       => $self->retrieve_data('api_key'),
 	    model         => $self->retrieve_data('model'),
 	    system_prompt => $self->retrieve_data('system_prompt'),
+	    only_logged   => $self->retrieve_data('only_logged'),
 	);
 
 	$self->output_html( $template->output() );
@@ -69,7 +70,8 @@ sub configure {
                 base_url           => $cgi->param('base_url') // 'https://api.mistral.ai/v1/',
                 api_key            => $cgi->param('api_key'),
 		model              => $cgi->param('model') // 'mistral-small-latest',
-		system_prompt      => $cgi->param('system_prompt'),
+		system_prompt      => $cgi->param('system_prompt') // $self->mbf_read('system_prompt.txt'),
+		only_logged        => $cgi->param('only_logged') eq 'on' ? 1 : 0,
                 last_configured_by => C4::Context->userenv->{'number'},
             }
         );
@@ -77,16 +79,30 @@ sub configure {
     }
 }
 
+sub is_allowed {
+    my ( $self ) = @_;
+    my $only_logged = $self->retrieve_data('only_logged');
+
+    return 1
+	unless $only_logged eq '1';
+
+    return 1
+	if defined C4::Context->userenv->{'number'};
+
+    return 0;
+}
+
 sub opac_js {
     my ( $self ) = @_;
     return '<script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>'
-	 . '<script>' . $self->mbf_read('chat.js') . '</script>';
+	. '<script>' . $self->mbf_read('chat.js') . '</script>'
+	if $self->is_allowed();
 }
 
 sub opac_head {
     my ( $self ) = @_;
-    my $css = $self->mbf_read('chat.css');
-    return '<style>' . $css . '</style>';
+    return '<style>' . $self->mbf_read('chat.css') . '</style>'
+	if $self->is_allowed();
 }
 
 sub api_routes {

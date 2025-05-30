@@ -40,7 +40,7 @@ sub chat {
     return $c->render(
         status => 500,
         openapi => { error => "missing configuration" }
-        ) unless $api_key and $base_url and $model;
+        ) unless $base_url and $model;
 
     my $user_agent = LWP::UserAgent->new;
     $user_agent->agent("KohaLLMSearch");

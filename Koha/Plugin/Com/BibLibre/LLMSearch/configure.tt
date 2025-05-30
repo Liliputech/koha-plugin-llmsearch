@@ -1,6 +1,6 @@
 [% USE KohaDates %]
 [% INCLUDE 'doc-head-open.inc' %]
- <title>LLMSearch Plugin Configuration</title>
+<title>LLMSearch Plugin Configuration</title>
 [% INCLUDE 'doc-head-close.inc' %]
 </head>
 <body>
@@ -11,12 +11,13 @@
 
 <div id="doc3">
     <h3>LLMSearch: Configuration</h3>
-    	<form method="post">
+    	<form method="get">
         <input type="hidden" name="class" value="[% CLASS %]"/>
         <input type="hidden" name="method" value="[% METHOD %]"/>
+	[% INCLUDE 'csrf-token.inc' %]
 	<div>
 	<label for="api_key">Your Mistral API Key</label>
-	<input type="text" name="api_key" required="true" value="[% api_key %]"/>
+	<input type="text" name="api_key" value="[% api_key %]"/>
 	</div>
 	<div>
 	<label for="system_prompt">System Prompt</label>
@@ -28,6 +29,10 @@
 	<div>
 	<label for="base_url">Optional : AI Base URL</label>
 	<input type="text" name="base_url" value="[% base_url %]"/>
+	</div>
+	<div>
+	<label for="only_logged">Optional : Only show to logged-in users</label>
+	<input type="checkbox" name="only_logged" [% IF ( only_logged ) %]checked="checked"[% END %]/>
 	</div>
 	<div>
         <input type="hidden" name="save" value="1" />
