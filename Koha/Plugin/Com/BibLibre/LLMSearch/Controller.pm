@@ -2,6 +2,7 @@ package Koha::Plugin::Com::BibLibre::LLMSearch::Controller;
 
 use Modern::Perl;
 use C4::Context;
+use C4::Auth qw( get_session );
 use Koha::Plugin::Com::BibLibre::LLMSearch;
 use Mojo::Base 'Mojolicious::Controller';
 use URI::Escape;
@@ -13,7 +14,22 @@ use HTTP::Response;
 use Data::Dumper;
 
 sub chat {
-    my $c = shift->openapi->valid_input or return;
+    my $c = shift;
+    my $cookies = $c->req->cookies;
+    warn Dumper($cookies);
+    my $session;
+    foreach my $cookie (@$cookies) {
+	if ($cookie->{name} eq 'CGISESSID') {
+	    $session = get_session( $cookie->{value} );
+	    last;
+	}
+    }
+
+    $c = $c->openapi->valid_input or return;
+    return $c->render(
+	status => 500,
+	openapi => { error => "missing authorization from UI"}
+	) if $session->is_new();
 
     my $plugin   = Koha::Plugin::Com::BibLibre::LLMSearch->new();
     my $api_key  = $plugin->retrieve_data('api_key');
