@@ -46,6 +46,31 @@ sub new {
 
 sub install {
     my ( $self, $args ) = @_;
+    my $table = $self->get_qualified_table_name('stats');
+    warn "Install LLMSEARCH";
+    return C4::Context->dbh->do("
+           CREATE TABLE IF NOT EXISTS $table (
+               id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+               timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+               categorycode VARCHAR(10),
+               branchcode VARCHAR(10),
+               enrolled_year YEAR,
+               birth_year YEAR,
+               sort1 VARCHAR(80),
+               sort2 VARCHAR(80),
+               opac_lang VARCHAR(10),
+               tokens_sent INT UNSIGNED,
+               tokens_received INT UNSIGNED
+               ) ENGINE=InnoDB;
+               ");
+}
+
+sub upgrade {
+    my ( $self, $args ) = @_;
+
+    my $dt = dt_from_string();
+    $self->store_data( { last_upgraded => $dt->ymd('-') . ' ' . $dt->hms(':') } );
+
     return 1;
 }
 
@@ -53,25 +78,27 @@ sub configure {
     my ( $self, $args ) = @_;
     my $cgi = $self->{'cgi'};
     unless ($cgi->param('save')) {
-	my $template = $self->get_template({ file => 'configure.tt' });
-	$template->param(
-	    base_url      => $self->retrieve_data('base_url'),
-	    api_key       => $self->retrieve_data('api_key'),
-	    model         => $self->retrieve_data('model'),
-	    system_prompt => $self->retrieve_data('system_prompt'),
-	    only_logged   => $self->retrieve_data('only_logged'),
-	);
+        my $template = $self->get_template({ file => 'configure.tt' });
+        $template->param(
+            base_url      => $self->retrieve_data('base_url'),
+            api_key       => $self->retrieve_data('api_key'),
+            model         => $self->retrieve_data('model'),
+            system_prompt => $self->retrieve_data('system_prompt'),
+            only_logged   => $self->retrieve_data('only_logged'),
+            enable_stats  => $self->retrieve_data('enable_stats'),
+        );
 
-	$self->output_html( $template->output() );
+        $self->output_html( $template->output() );
     }
     else {
         $self->store_data(
             {
-                base_url           => $cgi->param('base_url') // 'https://api.mistral.ai/v1/',
+                base_url           => $cgi->param('base_url') // 'https://api.mistral.ai/v1/chat/completions',
                 api_key            => $cgi->param('api_key'),
-		model              => $cgi->param('model') // 'mistral-small-latest',
-		system_prompt      => $cgi->param('system_prompt') // $self->mbf_read('system_prompt.txt'),
-		only_logged        => $cgi->param('only_logged') eq 'on' ? 1 : 0,
+                model              => $cgi->param('model') // 'mistral-small-latest',
+                system_prompt      => $cgi->param('system_prompt') // $self->mbf_read('system_prompt.txt'),
+                only_logged        => $cgi->param('only_logged') eq 'on' ? 1 : 0,
+                enable_stats       => $cgi->param('enable_stats') eq 'on' ? 1 : 0,
                 last_configured_by => C4::Context->userenv->{'number'},
             }
         );
@@ -84,10 +111,10 @@ sub is_allowed {
     my $only_logged = $self->retrieve_data('only_logged');
 
     return 1
-	unless $only_logged eq '1';
+        unless $only_logged eq '1';
 
     return 1
-	if defined C4::Context->userenv->{'number'};
+        if defined C4::Context->userenv->{'number'};
 
     return 0;
 }
@@ -95,14 +122,14 @@ sub is_allowed {
 sub opac_js {
     my ( $self ) = @_;
     return '<script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>'
-	. '<script>' . $self->mbf_read('chat.js') . '</script>'
-	if $self->is_allowed();
+        . '<script>' . $self->mbf_read('chat.js') . '</script>'
+        if $self->is_allowed();
 }
 
 sub opac_head {
     my ( $self ) = @_;
     return '<style>' . $self->mbf_read('chat.css') . '</style>'
-	if $self->is_allowed();
+        if $self->is_allowed();
 }
 
 sub api_routes {
