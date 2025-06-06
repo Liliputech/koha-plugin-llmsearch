@@ -16,31 +16,36 @@
         <input type="hidden" name="method" value="[% METHOD %]"/>
 	[% INCLUDE 'csrf-token.inc' %]
 	<div>
-	<label for="api_key">LLM API Key</label>
-	<input type="text" name="api_key" value="[% api_key %]"/>
+            <label for="api_key">LLM API Key</label>
+	    <input type="text" name="api_key" value="[% api_key %]"/>
 	</div>
 	<div>
-	<label for="system_prompt">System Prompt</label>
-	<textarea name="system_prompt">[% system_prompt %]</textarea>
-	<div>
-	<label for="model">Model to use</label>
-	<input type="text" name="model" value="[% model %]"/>
+	    <label for="welcome">Welcome message</label>
+	    <textarea name="welcome">[% welcome %]</textarea>
 	</div>
 	<div>
-	<label for="base_url">Base URL</label>
-	<input type="text" name="base_url" value="[% base_url %]"/>
+	    <label for="system_prompt">System Prompt</label>
+	    <textarea name="system_prompt">[% system_prompt %]</textarea>
 	</div>
 	<div>
-	<label for="only_logged">Optional : Only show to logged-in users</label>
-	<input type="checkbox" name="only_logged" [% IF ( only_logged ) %]checked="checked"[% END %]/>
+            <label for="model">Model to use</label>
+	    <input type="text" name="model" value="[% model %]"/>
 	</div>
 	<div>
-	<label for="only_logged">Optional : Enable stats collection</label>
-	<input type="checkbox" name="enable_stats" [% IF ( enable_stats ) %]checked="checked"[% END %]/>
+	    <label for="base_url">Base URL</label>
+	    <input type="text" name="base_url" value="[% base_url %]"/>
 	</div>
 	<div>
-        <input type="hidden" name="save" value="1" />
-        <input type="submit" value="Save configuration" />
+	    <label for="only_logged">Optional : Only show to logged-in users</label>
+	    <input type="checkbox" name="only_logged" [% IF ( only_logged ) %]checked="checked"[% END %]/>
+	</div>
+	<div>
+	    <label for="only_logged">Optional : Enable stats collection</label>
+	    <input type="checkbox" name="enable_stats" [% IF ( enable_stats ) %]checked="checked"[% END %]/>
+	</div>
+	<div>
+            <input type="hidden" name="save" value="1" />
+            <input type="submit" value="Save configuration" />
 	</div>
 	</form>
 [% INCLUDE 'intranet-bottom.inc' %]

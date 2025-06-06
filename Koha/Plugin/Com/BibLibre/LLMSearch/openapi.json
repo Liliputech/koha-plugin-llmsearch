@@ -39,5 +39,23 @@
         }
       }
     }
+  },
+  "/welcome": {
+    "get": {
+      "x-mojo-to": "Com::BibLibre::LLMSearch::Controller#welcome",
+      "description": "Called by javascript to get welcome message",
+      "operationId": "getWelcomeMessage",
+      "tags": [
+        "opac"
+      ],
+      "produces": [
+        "application/json"
+      ],
+      "responses": {
+        "200": {
+          "description": "the welcome message to display to users"
+        }
+      }
+    }
   }
 }

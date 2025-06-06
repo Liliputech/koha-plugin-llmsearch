@@ -14,6 +14,16 @@ use LWP::UserAgent;
 use HTTP::Request;
 use HTTP::Response;
 
+our $plugin = Koha::Plugin::Com::BibLibre::LLMSearch->new();
+
+sub welcome {
+    my $c = shift->openapi->valid_input or return;
+    return $c->render(
+	status => 200,
+	openapi => $plugin->retrieve_data('welcome'),
+        );
+}
+
 sub chat {
     my $c = shift;
     my $cookies = $c->req->cookies;
@@ -35,7 +45,7 @@ sub chat {
         ) if $session->is_new();
 
     $c = $c->openapi->valid_input or return;
-    my $plugin   = Koha::Plugin::Com::BibLibre::LLMSearch->new();
+
     my $api_key  = $plugin->retrieve_data('api_key');
     my $base_url = $plugin->retrieve_data('base_url');
     my $model    = $plugin->retrieve_data('model');
@@ -92,7 +102,6 @@ sub log_request {
     my $args      = shift;
     my $opac_lang = $args->{'lang'};
     my $response  = $args->{'data'};
-    my $plugin    = Koha::Plugin::Com::BibLibre::LLMSearch->new();
 
     return 1 unless ( $plugin->retrieve_data('enable_stats') );
 

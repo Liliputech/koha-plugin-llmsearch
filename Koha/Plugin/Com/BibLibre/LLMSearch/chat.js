@@ -75,6 +75,10 @@ function saveMessage(role, content) {
 }
 
 function populateChat() {
+    $.get('/api/v1/contrib/llmsearch/welcome', function(data) {
+        addMessage('assistant', data)
+    });
+
     var current_chat = sessionStorage.getItem("current_chat");
     if (current_chat === null) {
 	current_chat = [];
@@ -82,6 +86,7 @@ function populateChat() {
     else {
 	current_chat = JSON.parse(current_chat);
     }
+
     current_chat.forEach(item => {
 	addMessage(item.role, item.content, 0);
     });

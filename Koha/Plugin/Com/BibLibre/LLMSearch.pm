@@ -77,31 +77,39 @@ sub upgrade {
 sub configure {
     my ( $self, $args ) = @_;
     my $cgi = $self->{'cgi'};
-    unless ($cgi->param('save')) {
-        my $template = $self->get_template({ file => 'configure.tt' });
-        $template->param(
-            base_url      => $self->retrieve_data('base_url'),
-            api_key       => $self->retrieve_data('api_key'),
-            model         => $self->retrieve_data('model'),
-            system_prompt => $self->retrieve_data('system_prompt'),
-            only_logged   => $self->retrieve_data('only_logged'),
-            enable_stats  => $self->retrieve_data('enable_stats'),
-        );
+    my $default_welcome = "Hello! I am the library bot and I'll do my best to assist you in your research!";
+    my $defaults = { base_url        => 'https://api.mistral.ai/v1/chat/completions',
+		     api_key         => '',
+		     model           => 'mistral-small-latest',
+		     welcome         => $default_welcome,
+		     system_prompt   => $self->mbf_read('system_prompt.txt'),
+		     only_logged     => 1,
+		     enable_stats    => 0,
+    };
 
+    unless ($cgi->param('save')) {
+	my $template = $self->get_template({ file => 'configure.tt' });
+	foreach my $key (keys %$defaults) {
+	    my $param_value = $self->retrieve_data($key);
+	    if (defined $param_value && $param_value ne '') {
+		$template->param($key => $param_value);
+	    }
+	    else {
+		$template->param($key => $defaults->{$key});
+	    }
+	}
         $self->output_html( $template->output() );
     }
     else {
-        $self->store_data(
-            {
-                base_url           => $cgi->param('base_url') // 'https://api.mistral.ai/v1/chat/completions',
-                api_key            => $cgi->param('api_key'),
-                model              => $cgi->param('model') // 'mistral-small-latest',
-                system_prompt      => $cgi->param('system_prompt') // $self->mbf_read('system_prompt.txt'),
-                only_logged        => $cgi->param('only_logged') eq 'on' ? 1 : 0,
-                enable_stats       => $cgi->param('enable_stats') eq 'on' ? 1 : 0,
-                last_configured_by => C4::Context->userenv->{'number'},
-            }
-        );
+	my $config = { %$defaults };
+	foreach my $key (keys %$defaults) {
+	    my $param_value = $cgi->param($key);
+	    if (defined $param_value && $param_value ne '') {
+		$config->{$key} = $param_value;
+	    }
+	}
+        $self->store_data( $config );
+	$self->store_data({last_configured_by => C4::Context->userenv->{'number'}});
         $self->go_home();
     }
 }
