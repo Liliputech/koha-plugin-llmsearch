@@ -21,7 +21,7 @@
 	</div>
 	<div>
 	<label for="system_prompt">System Prompt</label>
-	<textarea type="text" name="system_prompt" value="[% system_prompt %]"></textarea>
+	<textarea name="system_prompt">[% system_prompt %]</textarea>
 	<div>
 	<label for="model">Model to use</label>
 	<input type="text" name="model" value="[% model %]"/>

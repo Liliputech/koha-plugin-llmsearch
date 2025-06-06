@@ -39,7 +39,7 @@ sub chat {
     my $api_key  = $plugin->retrieve_data('api_key');
     my $base_url = $plugin->retrieve_data('base_url');
     my $model    = $plugin->retrieve_data('model');
-    my $prompt   = $plugin->mbf_read('system_prompt.txt');
+    my $prompt   = $plugin->retrieve_data('system_prompt');
 
     return $c->render(
         status => 500,
