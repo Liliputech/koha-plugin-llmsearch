@@ -7,8 +7,6 @@ use Modern::Perl;
 use base qw(Koha::Plugins::Base);
 use Template;
 use Mojo::JSON qw(decode_json);
-use Data::Dumper;
-
 
 ## Here we set our plugin version
 our $VERSION = "1";
@@ -79,37 +77,38 @@ sub configure {
     my $cgi = $self->{'cgi'};
     my $default_welcome = "Hello! I am the library bot and I'll do my best to assist you in your research!";
     my $defaults = { base_url        => 'https://api.mistral.ai/v1/chat/completions',
-		     api_key         => '',
-		     model           => 'mistral-small-latest',
-		     welcome         => $default_welcome,
-		     system_prompt   => $self->mbf_read('system_prompt.txt'),
-		     only_logged     => 1,
-		     enable_stats    => 0,
+                     api_key         => '',
+                     model           => 'mistral-small-latest',
+                     welcome         => $default_welcome,
+                     system_prompt   => $self->mbf_read('system_prompt.txt'),
+                     only_logged     => 1,
+                     allowed_cat     => '',
+                     enable_stats    => 0,
     };
 
     unless ($cgi->param('save')) {
-	my $template = $self->get_template({ file => 'configure.tt' });
-	foreach my $key (keys %$defaults) {
-	    my $param_value = $self->retrieve_data($key);
-	    if (defined $param_value && $param_value ne '') {
-		$template->param($key => $param_value);
-	    }
-	    else {
-		$template->param($key => $defaults->{$key});
-	    }
-	}
+        my $template = $self->get_template({ file => 'configure.tt' });
+        foreach my $key (keys %$defaults) {
+            my $param_value = $self->retrieve_data($key);
+            if (defined $param_value && $param_value ne '') {
+                $template->param($key => $param_value);
+            }
+            else {
+                $template->param($key => $defaults->{$key});
+            }
+        }
         $self->output_html( $template->output() );
     }
     else {
-	my $config = { %$defaults };
-	foreach my $key (keys %$defaults) {
-	    my $param_value = $cgi->param($key);
-	    if (defined $param_value && $param_value ne '') {
-		$config->{$key} = $param_value;
-	    }
-	}
+        my $config = { %$defaults };
+        foreach my $key (keys %$defaults) {
+            my $param_value = $cgi->param($key);
+            if (defined $param_value && $param_value ne '') {
+                $config->{$key} = $param_value;
+            }
+        }
         $self->store_data( $config );
-	$self->store_data({last_configured_by => C4::Context->userenv->{'number'}});
+        $self->store_data({last_configured_by => C4::Context->userenv->{'number'}});
         $self->go_home();
     }
 }
@@ -119,10 +118,21 @@ sub is_allowed {
     my $only_logged = $self->retrieve_data('only_logged');
 
     return 1
-        unless $only_logged eq '1';
+        if $only_logged eq '0';
 
+    my $borrowernumber = C4::Context->userenv->{'number'} // 0;
+    return 0
+        unless $borrowernumber;
+
+    my $allowed_cat = $self->retrieve_data('allowed_cat');
     return 1
-        if defined C4::Context->userenv->{'number'};
+        unless $allowed_cat;
+
+    my $patron = Koha::Patrons->find($borrowernumber)->unblessed();
+    foreach my $category (split(' ', $allowed_cat)) {
+        return 1
+            if $category eq $patron->{categorycode};
+    }
 
     return 0;
 }
