@@ -24,7 +24,11 @@ If you want to use another service (for example Ollama) you'll have to fill in t
 
 There is a default system prompt provided which will help Koha creates a search URL but you could as well customize the prompt to make it reply to any other requests such as library opening hours or give the assistant some knowledge about your circulation rules.
 
-There are also a configuration option to only allow the chat to appear to connected users.
+There are also a configuration option to only allow the chat to appear to connected users or any users.
+
+If you choose "Only logged", you can also restrict to a list of patron's category.
+You can provide the list of allowed categorycodes separated with space in the option.
+For example if you want to give access to Staff (S) and Teachers (T), you will enter "S T".
 
 And you can also choose rather to log your users usage of the LLM or not.
 

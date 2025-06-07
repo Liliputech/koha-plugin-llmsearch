@@ -40,6 +40,10 @@
 	    <input type="checkbox" name="only_logged" [% IF ( only_logged ) %]checked="checked"[% END %]/>
 	</div>
 	<div>
+	    <label for="allowed_cat">Allowed category codes, separated with space</label>
+	    <input type="text" name="allowed_cat" value="[% allowed_cat %]"/>
+	</div>
+	<div>
 	    <label for="only_logged">Optional : Enable stats collection</label>
 	    <input type="checkbox" name="enable_stats" [% IF ( enable_stats ) %]checked="checked"[% END %]/>
 	</div>
