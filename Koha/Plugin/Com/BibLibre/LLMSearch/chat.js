@@ -1,5 +1,5 @@
 $(document).ready(function() {
-    $('div#report-koha-url').parent().after('<div class="col-sm-auto"><button class="btn btn-primary open-button" onclick="openForm()" title="AI Chat" aria-label="AI Chat"><i class="fa-solid fa-robot"></i></button></div>');
+    $('form#searchform div:first').append('<div class="order-6 col-sm-auto"><button class="btn btn-primary" type="button" onclick="openForm()" title="AI Chat" aria-label="AI Chat"><i class="fa-solid fa-robot"></i></button></div>');
     
     fetch('/api/v1/contrib/llmsearch/static/chat.html')
         .then(response => response.text())
@@ -76,7 +76,7 @@ function saveMessage(role, content) {
 
 function populateChat() {
     $.get('/api/v1/contrib/llmsearch/welcome', function(data) {
-        addMessage('assistant', data)
+        addMessage('assistant', data, 0)
     });
 
     var current_chat = sessionStorage.getItem("current_chat");
@@ -94,5 +94,6 @@ function populateChat() {
 
 function resetChat() {
     sessionStorage.removeItem("current_chat");
-    $('div.chat-messages').children().slice(1).remove();
+    $('div.chat-messages').children().remove();
+    populateChat();
 }
