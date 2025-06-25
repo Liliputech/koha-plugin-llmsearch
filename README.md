@@ -4,9 +4,9 @@
 
 ## Introduction
 This plugin is a first attempt at creating a LLM search plugin.
-The architecture idea is to have the LLM only do a "translation" between a users request in natural language to a Koha Search forwarding. 
+The architecture idea is to have the LLM only do a "translation" between a users request in natural language to generate valid Koha search query url. 
 
-For now, it adds a "Robot" button at the bottom right of the OPAC.
+For now, it adds a "Robot" button next to the Search button of the OPAC.
 A click on that button opens a chat overlay.
 Given every aspect of the configuration has been done, you can already use any LLM on Koha's OPAC!
 The configuration need an API Key from any provider compatible with OpenAI API.

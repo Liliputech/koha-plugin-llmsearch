@@ -1,5 +1,5 @@
 $(document).ready(function() {
-    $('form#searchform div:first').append('<div class="order-6 col-sm-auto"><button class="btn btn-primary" type="button" onclick="openForm()" title="AI Chat" aria-label="AI Chat"><i class="fa-solid fa-robot"></i></button></div>');
+    $('form#searchform div:first').append('<div class="order-6 order-sm-4 col-sm-auto"><button class="btn btn-primary" type="button" onclick="openForm()" title="AI Chat" aria-label="AI Chat"><i class="fa-solid fa-robot"></i></button></div>');
     
     fetch('/api/v1/contrib/llmsearch/static/chat.html')
         .then(response => response.text())
