@@ -4,7 +4,7 @@
     bottom: 0;
     right: 15px;
     border: 3px solid #f1f1f1;
-    z-index: 9;
+    z-index: 1000;
 }
 
 .chat-container {
@@ -26,7 +26,6 @@
 }
 
 .chat-container div.chat-controls {
-    float: right;
     width: -moz-available;
 }
 
