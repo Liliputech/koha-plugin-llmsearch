@@ -120,13 +120,13 @@ sub is_allowed {
     return 1
         if $only_logged eq '0';
 
-    my $borrowernumber = C4::Context->userenv->{'number'} // 0;
-    return 0
-        unless $borrowernumber;
-
     my $allowed_cat = $self->retrieve_data('allowed_cat');
     return 1
         unless $allowed_cat;
+
+    my $borrowernumber = C4::Context->userenv->{'number'} // 0;
+    return 0
+        unless $borrowernumber;
 
     my $patron = Koha::Patrons->find($borrowernumber)->unblessed();
     foreach my $category (split(' ', $allowed_cat)) {
