@@ -141,6 +141,7 @@ sub is_allowed {
 sub opac_js {
     my ( $self ) = @_;
     return '<script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>'
+        . '<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>'
         . '<script>' . $self->mbf_read('chat.js') . '</script>'
         if $self->is_allowed();
 }

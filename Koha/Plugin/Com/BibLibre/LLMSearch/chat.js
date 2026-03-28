@@ -41,7 +41,7 @@ function askAI() {
     $.post('/api/v1/contrib/llmsearch/chat', { json : sessionStorage.getItem('current_chat') }, function(data) {
         console.log(data);
         if (data.choices && data.choices.length > 0) {
-            const content = data.choices[0].message.content;
+            const content = preprocessContent(data.choices[0].message.content);
 	    const clean = DOMPurify.sanitize(content);
             $('div.chat-messages div.assistant:last p').html(clean);
 	    saveMessage('assistant', clean);
@@ -92,6 +92,14 @@ function populateChat() {
             addMessage(item.role, item.content, 0);
         });
     }
+}
+
+// Normalize LLM output before sanitization:
+// 1. Use marked.js to convert Markdown (or pass-through HTML) to clean HTML
+// 2. Strip any absolute origin from href attributes so all links are relative
+function preprocessContent(content) {
+    const html = marked.parse(content);
+    return html.replace(/href="https?:\/\/[^/"]+(\/.*)"/g, 'href="$1"');
 }
 
 function resetChat() {
