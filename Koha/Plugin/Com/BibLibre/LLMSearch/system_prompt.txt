@@ -40,6 +40,14 @@ You have access to a tool called `search_catalog` that lets you query the actual
 5. You may include the result count in your response to give the user a sense of how many items are available (e.g. "I found 12 results for...").
 6. The tool response includes a `query` field containing the exact CCL query string that was used. **Always build the search URL using that exact `query` value** (URL-encoded), never reconstruct the CCL query yourself.
 
+## Controlled vocabulary fields
+
+Some search fields are backed by a fixed list of authorized values (e.g. language codes, audience codes, item types).
+When a field description says **[controlled vocabulary]**:
+1. Call `get_authorized_values` with that field name to retrieve the valid values.
+2. Pick the most appropriate value(s) from the returned list.
+3. Use the `value` (not the `label`) when passing the parameter to `search_catalog`.
+
 ### Tool parameters:
 Use the search field names listed above as parameter names. Pass the search value as a string.
 All parameters are optional. Combine only those that are relevant to the query.

@@ -118,6 +118,9 @@ sub chat {
                 if ( $fn_name eq 'search_catalog' ) {
                     $result = _execute_search($fn_args);
                 }
+                elsif ( $fn_name eq 'get_authorized_values' ) {
+                    $result = _execute_get_authorized_values($fn_args);
+                }
                 else {
                     $result = { error => "Unknown tool: $fn_name" };
                 }
@@ -255,6 +258,12 @@ sub _get_search_tools {
                    . 'before 2005 (i.e. up to 2004) → "-2004"; '
                    . 'from 2005 onwards → "2005-".';
         }
+        # Flag fields backed by authorized values
+        if ( _get_field_av_category( $field->{name} ) ) {
+            $desc .= ' [controlled vocabulary — call get_authorized_values("'
+                   . $field->{name}
+                   . '") to get the list of valid values before searching]';
+        }
         $properties{ $field->{name} } = {
             type        => 'string',
             description => $desc,
@@ -283,7 +292,27 @@ sub _get_search_tools {
                     required   => [],
                 },
             },
-        }
+        },
+        {
+            type     => 'function',
+            function => {
+                name        => 'get_authorized_values',
+                description =>
+                    'Get the list of valid controlled-vocabulary values for a search field. '
+                    . 'Call this when a field description says "[controlled vocabulary]" '
+                    . 'to retrieve the exact values you should use in your query.',
+                parameters => {
+                    type       => 'object',
+                    properties => {
+                        field_name => {
+                            type        => 'string',
+                            description => 'The search field name to look up (e.g. "subject", "language")',
+                        },
+                    },
+                    required => ['field_name'],
+                },
+            },
+        },
     ];
 }
 
@@ -353,6 +382,69 @@ sub _execute_search {
     }
 
     return { count => ( $total_hits // 0 ), query => $query };
+}
+
+# -------------------------------------------------------------------------
+# _get_field_av_category( $field_name ) -> $category_string or undef
+# Traces search_field → search_marc_to_field → search_marc_map →
+# marc_subfield_structure to find whether the field is backed by an
+# authorized value category. Returns the category name or undef.
+# -------------------------------------------------------------------------
+sub _get_field_av_category {
+    my ($field_name) = @_;
+
+    my $dbh = C4::Context->dbh;
+
+    # marc_field is stored as e.g. "245a" or "245$a"; handle both formats.
+    my $sth = $dbh->prepare( q{
+        SELECT DISTINCT mss.authorised_value
+        FROM   search_field sf
+        JOIN   search_marc_to_field smtf ON smtf.search_field_id = sf.id
+        JOIN   search_marc_map      smm  ON smm.id = smtf.search_marc_map_id
+        JOIN   marc_subfield_structure mss
+               ON  mss.tagfield    = SUBSTRING(smm.marc_field, 1, 3)
+               AND mss.tagsubfield = REPLACE(SUBSTRING(smm.marc_field, 4), '$', '')
+        WHERE  sf.name              = ?
+          AND  smm.index_name       = 'biblios'
+          AND  mss.authorised_value IS NOT NULL
+          AND  mss.authorised_value != ''
+        LIMIT 1
+    } );
+    $sth->execute($field_name);
+    my ($category) = $sth->fetchrow_array;
+    return $category;
+}
+
+# -------------------------------------------------------------------------
+# _execute_get_authorized_values( \%params ) -> { category=>, values=>[] }
+# Returns the list of valid authorized values for a given search field.
+# -------------------------------------------------------------------------
+sub _execute_get_authorized_values {
+    my ($params) = @_;
+
+    my $field_name = $params->{field_name};
+    return { error => 'field_name parameter is required' }
+        unless $field_name;
+
+    my $category = _get_field_av_category($field_name);
+    return { message => "Field '$field_name' does not use controlled vocabulary" }
+        unless $category;
+
+    my $dbh = C4::Context->dbh;
+    my $sth = $dbh->prepare( q{
+        SELECT authorised_value, lib
+        FROM   authorised_values
+        WHERE  category = ?
+        ORDER  BY lib
+    } );
+    $sth->execute($category);
+
+    my @values;
+    while ( my ( $av, $lib ) = $sth->fetchrow_array ) {
+        push @values, { value => $av, label => ( $lib // $av ) };
+    }
+
+    return { category => $category, values => \@values };
 }
 
 sub log_request {
