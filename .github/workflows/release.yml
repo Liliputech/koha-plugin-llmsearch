@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Build & Release kpz
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout plugin code
+        uses: actions/checkout@v4
+
+      - name: Parse repository name and tag version
+        id: myvars
+        run: |
+          IFS='/' read -r -a parts <<< "$GITHUB_REPOSITORY"
+          GITHUB_REPO="${parts[1]}"
+          echo "github_repo=$GITHUB_REPO" >> $GITHUB_OUTPUT
+          echo "GitHub repo: $GITHUB_REPO"
+
+          TAG_VERSION="${GITHUB_REF##*/}"
+          TAG_VERSION="${TAG_VERSION#v}"
+          echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+          echo "Tag version: $TAG_VERSION"
+
+      - name: Build Koha Plugin kpz artifact
+        id: kpz
+        uses: "bywatersolutions/github-action-koha-plugin-create-kpz@v3"
+        with:
+          release-version: ${{ steps.myvars.outputs.tag_version }}
+          release-name: ${{ steps.myvars.outputs.github_repo }}
+          minimum-version: "23.11"
+          plugin-module: "Koha/Plugin/Com/BibLibre/LLMSearch.pm"
+
+      - name: Show generated kpz filename
+        run: |
+          echo "KPZ filename: ${{ steps.kpz.outputs.filename }}"
+          ls -lh "${{ steps.kpz.outputs.filename }}"
+
+      - name: Create GitHub Release and attach kpz
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.kpz.outputs.filename }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
