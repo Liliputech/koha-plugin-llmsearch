@@ -54,8 +54,8 @@ sub chat {
                || $plugin->mbf_read('system_prompt.txt');
     # Inject the live index list from Koha's search_field table
     $prompt =~ s/\{\{SEARCH_INDEXES\}\}/_build_index_list_text()/e;
-    my $max_tool_rounds = $plugin->retrieve_data('max_tool_rounds') // 0;
-    my $use_function_calling = $max_tool_rounds > 0 ? 1 : 0;
+    my $max_tool_rounds = $plugin->retrieve_data('max_tool_rounds') // 3;
+    $max_tool_rounds = 1 if $max_tool_rounds < 1;
 
     return $c->render(
         status  => 500,
@@ -87,9 +87,8 @@ sub chat {
     my $tools          = _get_search_tools();
     my $final_response;
 
-    for my $round ( 1 .. ( $use_function_calling ? $max_tool_rounds : 1 ) ) {
-        my $chat_payload = { model => $model, messages => [@messages] };
-        $chat_payload->{tools} = $tools if $use_function_calling;
+    for my $round ( 1 .. $max_tool_rounds ) {
+        my $chat_payload = { model => $model, messages => [@messages], tools => $tools };
 
         my $http_response = _call_llm( $user_agent, $base_url, $api_key, $chat_payload );
 
@@ -104,9 +103,7 @@ sub chat {
         my $choice        = $response_data->{choices}[0];
 
         # If the LLM wants to call tools, execute them and loop
-        if (   $use_function_calling
-            && $choice->{finish_reason}
-            && $choice->{finish_reason} eq 'tool_calls' )
+        if ( $choice->{finish_reason} && $choice->{finish_reason} eq 'tool_calls' )
         {
             # Append the assistant's tool_calls message to the history
             push @messages, $choice->{message};

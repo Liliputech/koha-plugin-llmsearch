@@ -59,9 +59,9 @@
 	    <input type="checkbox" name="enable_stats" [% IF ( enable_stats ) %]checked="checked"[% END %]/>
 	</div>
 	<div>
-	    <label for="max_tool_rounds">Search validation : max tool call rounds (0 = disabled)</label>
-	    <input type="number" name="max_tool_rounds" min="0" max="20" value="[% max_tool_rounds %]"/>
-	    <p class="hint">When set to a value greater than 0, the LLM will call the Koha catalog to verify that each suggested search link returns results before presenting it to the user, retrying up to this many times. Set to 0 to disable. Requires a model that supports function calling / tools (e.g. mistral-small-latest, gpt-4o).</p>
+	    <label for="max_tool_rounds">Search validation : max tool call rounds</label>
+	    <input type="number" name="max_tool_rounds" min="1" max="20" value="[% max_tool_rounds %]"/>
+	    <p class="hint">Maximum number of catalog search rounds the LLM may perform to verify that suggested links return results. Function calling is always active (minimum 1). Requires a model that supports function calling / tools (e.g. mistral-small-latest, gpt-4o).</p>
 	</div>
 	<div>
             <input type="hidden" name="save" value="1" />
