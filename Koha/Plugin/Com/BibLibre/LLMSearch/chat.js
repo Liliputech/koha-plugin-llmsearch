@@ -10,6 +10,10 @@ $(document).ready(function() {
                 event.preventDefault();
                 askAI();
             });
+            // Auto-open chat when the page was reached via an LLM-generated search link
+            if (new URLSearchParams(window.location.search).get('llm') === '1') {
+                openForm();
+            }
         })
         .catch(error => {
             console.error('Error fetching the HTML file:', error);
