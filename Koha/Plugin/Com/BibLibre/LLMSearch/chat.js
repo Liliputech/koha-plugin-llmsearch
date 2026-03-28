@@ -75,21 +75,19 @@ function saveMessage(role, content) {
 }
 
 function populateChat() {
-    $.get('/api/v1/contrib/llmsearch/welcome', function(data) {
-        addMessage('assistant', data, 0)
-    });
-
     var current_chat = sessionStorage.getItem("current_chat");
     if (current_chat === null) {
-	current_chat = [];
+        // No existing history — show the welcome message
+        $.get('/api/v1/contrib/llmsearch/welcome', function(data) {
+            addMessage('assistant', data, 0);
+        });
     }
     else {
-	current_chat = JSON.parse(current_chat);
+        // Restore existing conversation from session storage
+        JSON.parse(current_chat).forEach(item => {
+            addMessage(item.role, item.content, 0);
+        });
     }
-
-    current_chat.forEach(item => {
-	addMessage(item.role, item.content, 0);
-    });
 }
 
 function resetChat() {
