@@ -4,7 +4,7 @@
     bottom: 0;
     right: 15px;
     border: 3px solid #f1f1f1;
-    z-index: 1000;
+    z-index: 9999;
 }
 
 .chat-container {
@@ -27,29 +27,33 @@
 
 .chat-container div.chat-controls {
     width: -moz-available;
+    margin:5px;
 }
 
 .chat-container div.chat-messages {
     overflow: auto;
     max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
 
 .chat-container div.message {
     border-radius: 5px;
-    margin-bottom: 5px;
     padding: 15px;
-    display: inline-block;
+    max-width: 80%;
+    word-break: break-word;
 }
 
 .chat-container div.user {
-    float:left;
-    text-align:left;
+    align-self: flex-start;
+    text-align: left;
     background-color: lightgreen;
 }
 
 .chat-container div.assistant {
-    float:right;
-    text-align:right;
+    align-self: flex-end;
+    text-align: left;
     background-color: lightgray;
 }
 
