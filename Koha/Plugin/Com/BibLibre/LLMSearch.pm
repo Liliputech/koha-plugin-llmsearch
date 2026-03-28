@@ -80,7 +80,7 @@ sub configure {
                      api_key                  => '',
                      model                    => 'mistral-small-latest',
                      welcome                  => $default_welcome,
-                     system_prompt            => $self->mbf_read('system_prompt.txt'),
+                     system_prompt            => '',
                      only_logged              => 1,
                      allowed_cat              => '',
                      enable_stats             => 0,

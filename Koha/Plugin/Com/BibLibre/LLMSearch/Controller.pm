@@ -50,8 +50,7 @@ sub chat {
     my $api_key  = $plugin->retrieve_data('api_key');
     my $base_url = $plugin->retrieve_data('base_url');
     my $model    = $plugin->retrieve_data('model');
-    my $prompt = $plugin->retrieve_data('system_prompt')
-               || $plugin->mbf_read('system_prompt.txt');
+    my $prompt   = $plugin->retrieve_data('system_prompt') || $plugin->mbf_read('system_prompt.txt');
     # Inject the live index list from Koha's search_field table
     $prompt =~ s/\{\{SEARCH_INDEXES\}\}/_build_index_list_text()/e;
     my $max_tool_rounds = $plugin->retrieve_data('max_tool_rounds') // 3;
