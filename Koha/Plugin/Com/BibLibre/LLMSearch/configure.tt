@@ -48,6 +48,11 @@
 	    <input type="checkbox" name="enable_stats" [% IF ( enable_stats ) %]checked="checked"[% END %]/>
 	</div>
 	<div>
+	    <label for="enable_function_calling">Optional : Enable search validation (function calling)</label>
+	    <input type="checkbox" name="enable_function_calling" [% IF ( enable_function_calling ) %]checked="checked"[% END %]/>
+	    <p class="hint">When enabled, the LLM will call the Koha catalog to verify that each suggested search link returns results before presenting it to the user. Requires a model that supports function calling / tools (e.g. mistral-small-latest, gpt-4o).</p>
+	</div>
+	<div>
             <input type="hidden" name="save" value="1" />
             <input type="submit" value="Save configuration" />
 	</div>

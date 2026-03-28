@@ -16,12 +16,15 @@ use HTTP::Response;
 
 our $plugin = Koha::Plugin::Com::BibLibre::LLMSearch->new();
 
+# Maximum number of tool-call / LLM round-trips before giving up
+use constant MAX_TOOL_ROUNDS => 5;
+
 sub welcome {
     my $c = shift->openapi->valid_input or return;
     return $c->render(
-	status => 200,
-	openapi => $plugin->retrieve_data('welcome'),
-        );
+        status  => 200,
+        openapi => $plugin->retrieve_data('welcome'),
+    );
 }
 
 sub chat {
@@ -31,18 +34,18 @@ sub chat {
     my $session;
     my $opac_lang;
     foreach my $cookie (@$cookies) {
-        if ($cookie->{name} eq 'CGISESSID') {
+        if ( $cookie->{name} eq 'CGISESSID' ) {
             $session = get_session( $cookie->{value} );
         }
-        if ($cookie->{name} eq 'KohaOpacLanguage') {
+        if ( $cookie->{name} eq 'KohaOpacLanguage' ) {
             $opac_lang = $cookie->{value};
         }
     }
 
     return $c->render(
-        status => 500,
-        openapi => { error => "missing authorization from UI"}
-        ) if $session->is_new();
+        status  => 500,
+        openapi => { error => "missing authorization from UI" }
+    ) if $session->is_new();
 
     $c = $c->openapi->valid_input or return;
 
@@ -50,11 +53,12 @@ sub chat {
     my $base_url = $plugin->retrieve_data('base_url');
     my $model    = $plugin->retrieve_data('model');
     my $prompt   = $plugin->retrieve_data('system_prompt');
+    my $use_function_calling = $plugin->retrieve_data('enable_function_calling') // 0;
 
     return $c->render(
-        status => 500,
+        status  => 500,
         openapi => { error => "missing configuration" }
-        ) unless $base_url and $model;
+    ) unless $base_url and $model;
 
     my $user_agent = LWP::UserAgent->new;
     $user_agent->agent("KohaLLMSearch");
@@ -62,40 +66,217 @@ sub chat {
     my $json = $c->validation->param('json');
     $json = uri_unescape($json);
     my $previous_chat;
-    if ($json =~ /json=(.*)/) {
+    if ( $json =~ /json=(.*)/ ) {
         $previous_chat = decode_json($1);
     }
 
-    my @messages = ({ "role" => "system", "content" => $prompt });
+    my @messages = ( { "role" => "system", "content" => $prompt } );
 
     foreach my $message (@$previous_chat) {
         $message->{content} =~ s/\+/ /g;
         push @messages, $message;
     }
 
-    my $chat = { model => $model, messages => [@messages] };
+    # -------------------------------------------------------------------------
+    # Agentic tool-call loop
+    # -------------------------------------------------------------------------
+    my $tools          = _get_search_tools();
+    my $final_response;
 
-    my $header = ['Content-Type' => 'application/json',
-                  'Accept' => 'application/json',
-                  'Authorization' => 'Bearer ' . $api_key];
+    for my $round ( 1 .. MAX_TOOL_ROUNDS ) {
+        my $chat_payload = { model => $model, messages => [@messages] };
+        $chat_payload->{tools} = $tools if $use_function_calling;
 
-    my $req = HTTP::Request->new('POST', $base_url, $header, encode_json($chat));
-    my $response = $user_agent->request($req);
+        my $http_response = _call_llm( $user_agent, $base_url, $api_key, $chat_payload );
 
-    if ( $response->is_success ) {
-        my $response_data = decode_json($response->decoded_content);
+        unless ( $http_response->is_success ) {
+            return $c->render(
+                status  => 500,
+                openapi => { error => $http_response->decoded_content }
+            );
+        }
 
-        log_request({ lang => $opac_lang, data => $response_data});
+        my $response_data = decode_json( $http_response->decoded_content );
+        my $choice        = $response_data->{choices}[0];
+
+        # If the LLM wants to call tools, execute them and loop
+        if (   $use_function_calling
+            && $choice->{finish_reason}
+            && $choice->{finish_reason} eq 'tool_calls' )
+        {
+            # Append the assistant's tool_calls message to the history
+            push @messages, $choice->{message};
+
+            # Execute each requested tool call and append the results
+            for my $tool_call ( @{ $choice->{message}{tool_calls} } ) {
+                my $fn_name = $tool_call->{function}{name};
+                my $fn_args = decode_json( $tool_call->{function}{arguments} );
+                my $result;
+
+                if ( $fn_name eq 'search_catalog' ) {
+                    $result = _execute_search($fn_args);
+                }
+                else {
+                    $result = { error => "Unknown tool: $fn_name" };
+                }
+
+                push @messages, {
+                    role         => 'tool',
+                    tool_call_id => $tool_call->{id},
+                    content      => encode_json($result),
+                };
+            }
+
+            # Go back to LLM with tool results
+            next;
+        }
+
+        # LLM returned a normal stop — we're done
+        $final_response = $response_data;
+        last;
+    }
+
+    # Fallback: if we exhausted MAX_TOOL_ROUNDS without a stop
+    unless ($final_response) {
         return $c->render(
-            status => 200,
-            openapi => $response_data
+            status  => 500,
+            openapi => { error => "LLM tool-call loop exceeded maximum rounds" }
         );
     }
 
+    log_request( { lang => $opac_lang, data => $final_response } );
     return $c->render(
-        status => 500,
-        openapi => { error => $response->decoded_content }
-        );
+        status  => 200,
+        openapi => $final_response
+    );
+}
+
+# -------------------------------------------------------------------------
+# _call_llm( $ua, $base_url, $api_key, \%payload ) -> HTTP::Response
+# -------------------------------------------------------------------------
+sub _call_llm {
+    my ( $ua, $base_url, $api_key, $payload ) = @_;
+    my $header = [
+        'Content-Type'  => 'application/json',
+        'Accept'        => 'application/json',
+        'Authorization' => 'Bearer ' . $api_key,
+    ];
+    my $req = HTTP::Request->new( 'POST', $base_url, $header, encode_json($payload) );
+    return $ua->request($req);
+}
+
+# -------------------------------------------------------------------------
+# _get_search_tools() -> \@tools
+# Returns the OpenAI-compatible tool definition for search_catalog.
+# -------------------------------------------------------------------------
+sub _get_search_tools {
+    return [
+        {
+            type     => 'function',
+            function => {
+                name        => 'search_catalog',
+                description =>
+                    'Search the library catalog and return the number of matching results. '
+                    . 'Call this tool to verify that a search will return results BEFORE including a link in your response. '
+                    . 'If the count is 0, adjust the criteria (broader terms, fewer constraints, synonyms) and try again.',
+                parameters => {
+                    type       => 'object',
+                    properties => {
+                        keyword => {
+                            type        => 'string',
+                            description => 'General keyword search across all fields',
+                        },
+                        author => {
+                            type        => 'string',
+                            description => 'Author name',
+                        },
+                        title => {
+                            type        => 'string',
+                            description => 'Title or words from the title',
+                        },
+                        subject => {
+                            type        => 'string',
+                            description => 'Subject heading or topic',
+                        },
+                        publisher => {
+                            type        => 'string',
+                            description => 'Publisher name',
+                        },
+                        series => {
+                            type        => 'string',
+                            description => 'Series title',
+                        },
+                        language => {
+                            type        => 'string',
+                            description => 'Language code (e.g. fre, eng, ger)',
+                        },
+                        pubdate => {
+                            type        => 'string',
+                            description => 'Publication year or range, e.g. "2020" or "2010-2020"',
+                        },
+                    },
+                    required => [],
+                },
+            },
+        }
+    ];
+}
+
+# -------------------------------------------------------------------------
+# _escape_ccl_value( $value ) -> $quoted_value
+# Wraps a value in double quotes for CCL phrase search and removes any
+# embedded quotes to prevent query injection.
+# -------------------------------------------------------------------------
+sub _escape_ccl_value {
+    my ($val) = @_;
+    $val =~ s/"//g;
+    return qq("$val");
+}
+
+# -------------------------------------------------------------------------
+# _build_ccl_query( \%params ) -> $ccl_string
+# Converts structured search parameters into a CCL query string.
+# -------------------------------------------------------------------------
+sub _build_ccl_query {
+    my ($params) = @_;
+    my @parts;
+
+    push @parts, 'kw:'  . _escape_ccl_value( $params->{keyword} )   if $params->{keyword};
+    push @parts, 'au:'  . _escape_ccl_value( $params->{author} )     if $params->{author};
+    push @parts, 'ti:'  . _escape_ccl_value( $params->{title} )      if $params->{title};
+    push @parts, 'su:'  . _escape_ccl_value( $params->{subject} )    if $params->{subject};
+    push @parts, 'pb:'  . _escape_ccl_value( $params->{publisher} )  if $params->{publisher};
+    push @parts, 'se:'  . _escape_ccl_value( $params->{series} )     if $params->{series};
+    push @parts, 'ln:'  . _escape_ccl_value( $params->{language} )   if $params->{language};
+    push @parts, 'yr:'  . _escape_ccl_value( $params->{pubdate} )    if $params->{pubdate};
+
+    return @parts ? join( ' AND ', @parts ) : 'kw:*';
+}
+
+# -------------------------------------------------------------------------
+# _execute_search( \%params ) -> { count => N }
+# Runs a live Koha catalog search and returns the result count.
+# -------------------------------------------------------------------------
+sub _execute_search {
+    my ($params) = @_;
+
+    require Koha::SearchEngine::Search;
+    require Koha::SearchEngine;
+
+    my $searcher = Koha::SearchEngine::Search->new(
+        { index => $Koha::SearchEngine::BIBLIOS_INDEX }
+    );
+
+    my $query = _build_ccl_query($params);
+    my ( $error, $marcresults, $total_hits ) =
+        $searcher->simple_search_compat( $query, 0, 1 );
+
+    if ($error) {
+        warn "LLMSearch: search error for query '$query': $error";
+        return { count => 0, query => $query, error => "$error" };
+    }
+
+    return { count => ( $total_hits // 0 ), query => $query };
 }
 
 sub log_request {
@@ -106,9 +287,9 @@ sub log_request {
     return 1 unless ( $plugin->retrieve_data('enable_stats') );
 
     my $userenv = C4::Context->userenv;
-    my $patron = Koha::Patrons->find($userenv->{'number'})->unblessed();
+    my $patron  = Koha::Patrons->find( $userenv->{'number'} )->unblessed();
 
-    my $dbh = C4::Context->dbh;
+    my $dbh   = C4::Context->dbh;
     my $table = $plugin->get_qualified_table_name('stats');
 
     my $query = "INSERT INTO $table (
@@ -123,8 +304,8 @@ sub log_request {
 
     return $dbh->do($query) unless $patron;
 
-    my $enrolledyear = dt_from_string($patron->{dateenrolled}, undef, undef)->year;
-    my $birthyear = dt_from_string($patron->{dateofbirth}, undef, undef)->year;
+    my $enrolledyear = dt_from_string( $patron->{dateenrolled}, undef, undef )->year;
+    my $birthyear    = dt_from_string( $patron->{dateofbirth},  undef, undef )->year;
     $query = "
         INSERT INTO $table (
             categorycode,
@@ -150,4 +331,5 @@ sub log_request {
 
     return $dbh->do($query);
 }
+
 1;

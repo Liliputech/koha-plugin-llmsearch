@@ -76,14 +76,15 @@ sub configure {
     my ( $self, $args ) = @_;
     my $cgi = $self->{'cgi'};
     my $default_welcome = "Hello! I am the library bot and I'll do my best to assist you in your research!";
-    my $defaults = { base_url        => 'https://api.mistral.ai/v1/chat/completions',
-                     api_key         => '',
-                     model           => 'mistral-small-latest',
-                     welcome         => $default_welcome,
-                     system_prompt   => $self->mbf_read('system_prompt.txt'),
-                     only_logged     => 1,
-                     allowed_cat     => '',
-                     enable_stats    => 0,
+    my $defaults = { base_url                 => 'https://api.mistral.ai/v1/chat/completions',
+                     api_key                  => '',
+                     model                    => 'mistral-small-latest',
+                     welcome                  => $default_welcome,
+                     system_prompt            => $self->mbf_read('system_prompt.txt'),
+                     only_logged              => 1,
+                     allowed_cat              => '',
+                     enable_stats             => 0,
+                     enable_function_calling  => 0,
     };
 
     unless ($cgi->param('save')) {
