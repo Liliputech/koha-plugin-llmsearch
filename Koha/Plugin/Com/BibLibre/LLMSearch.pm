@@ -84,7 +84,7 @@ sub configure {
                      only_logged              => 1,
                      allowed_cat              => '',
                      enable_stats             => 0,
-                     enable_function_calling  => 0,
+                     max_tool_rounds          => 0,
     };
 
     unless ($cgi->param('save')) {

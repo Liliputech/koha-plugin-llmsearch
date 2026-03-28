@@ -8,7 +8,7 @@ use Koha::Patron;
 use Koha::DateUtils qw( dt_from_string );
 use Mojo::Base 'Mojolicious::Controller';
 use URI::Escape;
-use Encode;
+use Encode qw(encode);
 use JSON qw( encode_json decode_json );
 use LWP::UserAgent;
 use HTTP::Request;
@@ -16,8 +16,6 @@ use HTTP::Response;
 
 our $plugin = Koha::Plugin::Com::BibLibre::LLMSearch->new();
 
-# Maximum number of tool-call / LLM round-trips before giving up
-use constant MAX_TOOL_ROUNDS => 5;
 
 sub welcome {
     my $c = shift->openapi->valid_input or return;
@@ -53,7 +51,8 @@ sub chat {
     my $base_url = $plugin->retrieve_data('base_url');
     my $model    = $plugin->retrieve_data('model');
     my $prompt   = $plugin->retrieve_data('system_prompt');
-    my $use_function_calling = $plugin->retrieve_data('enable_function_calling') // 0;
+    my $max_tool_rounds = $plugin->retrieve_data('max_tool_rounds') // 0;
+    my $use_function_calling = $max_tool_rounds > 0 ? 1 : 0;
 
     return $c->render(
         status  => 500,
@@ -67,7 +66,9 @@ sub chat {
     $json = uri_unescape($json);
     my $previous_chat;
     if ( $json =~ /json=(.*)/ ) {
-        $previous_chat = decode_json($1);
+        # $1 is a Perl Unicode string (UTF-8 flag set); decode_json expects
+        # raw UTF-8 octets, so we re-encode before parsing.
+        $previous_chat = decode_json( encode('UTF-8', $1) );
     }
 
     my @messages = ( { "role" => "system", "content" => $prompt } );
@@ -83,7 +84,7 @@ sub chat {
     my $tools          = _get_search_tools();
     my $final_response;
 
-    for my $round ( 1 .. MAX_TOOL_ROUNDS ) {
+    for my $round ( 1 .. ( $use_function_calling ? $max_tool_rounds : 1 ) ) {
         my $chat_payload = { model => $model, messages => [@messages] };
         $chat_payload->{tools} = $tools if $use_function_calling;
 
@@ -110,7 +111,9 @@ sub chat {
             # Execute each requested tool call and append the results
             for my $tool_call ( @{ $choice->{message}{tool_calls} } ) {
                 my $fn_name = $tool_call->{function}{name};
-                my $fn_args = decode_json( $tool_call->{function}{arguments} );
+                # arguments is a Perl Unicode string extracted from the parsed
+                # JSON response; re-encode to UTF-8 bytes before decoding again.
+                my $fn_args = decode_json( encode('UTF-8', $tool_call->{function}{arguments}) );
                 my $result;
 
                 if ( $fn_name eq 'search_catalog' ) {
@@ -136,12 +139,42 @@ sub chat {
         last;
     }
 
-    # Fallback: if we exhausted MAX_TOOL_ROUNDS without a stop
+    # Fallback: if we exhausted max_tool_rounds rounds without reaching a stop,
+    # make one final tool-free LLM call so it can reply in the user's language.
     unless ($final_response) {
-        return $c->render(
-            status  => 500,
-            openapi => { error => "LLM tool-call loop exceeded maximum rounds" }
-        );
+        push @messages, {
+            role    => 'user',
+            content =>
+                '[SYSTEM INSTRUCTION] All catalog search attempts returned 0 results. '
+                . 'Please inform the user that you were unable to find any matching resources '
+                . 'in the catalog despite several attempts, and invite them to reformulate their '
+                . 'request using different or broader terms. '
+                . 'Reply in the same language as the rest of the conversation.',
+        };
+
+        # No tools in this call — the LLM must produce a plain stop response
+        my $fallback_payload = { model => $model, messages => [@messages] };
+        my $fallback_http = _call_llm( $user_agent, $base_url, $api_key, $fallback_payload );
+
+        if ( $fallback_http->is_success ) {
+            $final_response = decode_json( $fallback_http->decoded_content );
+        }
+        else {
+            # Ultimate fallback if even this call fails
+            $final_response = {
+                choices => [
+                    {
+                        message => {
+                            role    => 'assistant',
+                            content => '<p>I was unable to find matching results. '
+                                . 'Please try reformulating your request.</p>',
+                        },
+                        finish_reason => 'stop',
+                    }
+                ],
+                usage => { prompt_tokens => 0, completion_tokens => 0 },
+            };
+        }
     }
 
     log_request( { lang => $opac_lang, data => $final_response } );
