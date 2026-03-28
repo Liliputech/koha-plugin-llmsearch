@@ -25,6 +25,10 @@
 	</div>
 	<details>
 	    <summary style="cursor:pointer; font-weight:bold;">&#9881; Expert: Custom system prompt</summary>
+	    <div>
+	        <label for="debug_mode">Enable debug mode (logs all LLM exchanges to the browser console)</label>
+	        <input type="checkbox" name="debug_mode" value="1" [% IF ( debug_mode ) %]checked="checked"[% END %]/>
+	    </div>
 	    <div class="hint" style="margin:.5em 0;">
 	        <strong>Warning:</strong> this prompt controls the LLM's entire behaviour.
 	        Modify only if you know what you are doing.<br/>

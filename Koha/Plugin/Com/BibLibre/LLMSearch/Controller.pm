@@ -85,9 +85,19 @@ sub chat {
     # -------------------------------------------------------------------------
     my $tools          = _get_search_tools();
     my $final_response;
+    my $debug_mode     = $plugin->retrieve_data('debug_mode') // 0;
+    my @debug_log;      # collected only when debug_mode is on
+    # Pre-serialise debug entries to strings so Mojo::JSON never has to
+    # traverse the (potentially very deep) combined structure.
+    my $debug_json = $debug_mode ? JSON->new->utf8->max_depth(2048) : undef;
 
     for my $round ( 1 .. $max_tool_rounds ) {
         my $chat_payload = { model => $model, messages => [@messages], tools => $tools };
+
+        if ( $debug_mode ) {
+            eval { push @debug_log, $debug_json->encode({ round => $round, request => $chat_payload }) };
+            warn "LLMSearch debug encode error (request): $@" if $@;
+        }
 
         my $http_response = _call_llm( $user_agent, $base_url, $api_key, $chat_payload );
 
@@ -100,6 +110,11 @@ sub chat {
 
         my $response_data = decode_json( $http_response->decoded_content );
         my $choice        = $response_data->{choices}[0];
+
+        if ( $debug_mode ) {
+            eval { push @debug_log, $debug_json->encode({ round => $round, response => $response_data }) };
+            warn "LLMSearch debug encode error (response): $@" if $@;
+        }
 
         # If the LLM wants to call tools, execute them and loop
         if ( $choice->{finish_reason} && $choice->{finish_reason} eq 'tool_calls' )
@@ -123,6 +138,16 @@ sub chat {
                 }
                 else {
                     $result = { error => "Unknown tool: $fn_name" };
+                }
+
+                if ( $debug_mode ) {
+                    eval { push @debug_log, $debug_json->encode({
+                        round       => $round,
+                        tool_call   => $fn_name,
+                        arguments   => $fn_args,
+                        tool_result => $result,
+                    }) };
+                    warn "LLMSearch debug encode error (tool): $@" if $@;
                 }
 
                 push @messages, {
@@ -178,6 +203,9 @@ sub chat {
             };
         }
     }
+
+    # Attach debug log to response when debug_mode is on
+    $final_response->{_debug_log} = \@debug_log if $debug_mode && @debug_log;
 
     log_request( { lang => $opac_lang, data => $final_response } );
     return $c->render(

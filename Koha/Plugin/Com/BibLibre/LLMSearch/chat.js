@@ -39,7 +39,16 @@ function askAI() {
 
     chatWindow.scrollTop(chatWindow[0].scrollHeight);
     $.post('/api/v1/contrib/llmsearch/chat', { json : sessionStorage.getItem('current_chat') }, function(data) {
-        console.log(data);
+        if (data._debug_log) {
+            console.group('[LLMSearch] Debug log');
+            data._debug_log.forEach(function(entryStr) {
+                var entry = (typeof entryStr === 'string') ? JSON.parse(entryStr) : entryStr;
+                if (entry.request)   { console.group('Round ' + entry.round + ' [Request]');  console.log(entry.request);  console.groupEnd(); }
+                if (entry.response)  { console.group('Round ' + entry.round + ' [Response]'); console.log(entry.response); console.groupEnd(); }
+                if (entry.tool_call) { console.group('Round ' + entry.round + ' [tool] ' + entry.tool_call); console.log('Args:', entry.arguments); console.log('Result:', entry.tool_result); console.groupEnd(); }
+            });
+            console.groupEnd();
+        }
         if (data.choices && data.choices.length > 0) {
             const content = preprocessContent(data.choices[0].message.content);
 	    const clean = DOMPurify.sanitize(content);

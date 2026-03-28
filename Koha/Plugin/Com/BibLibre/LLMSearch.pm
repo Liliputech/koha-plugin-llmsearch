@@ -85,6 +85,7 @@ sub configure {
                      allowed_cat              => '',
                      enable_stats             => 0,
                      max_tool_rounds          => 3,
+                     debug_mode               => 0,
     };
 
     unless ($cgi->param('save')) {
