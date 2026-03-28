@@ -247,9 +247,18 @@ sub _get_search_tools {
 
     my %properties;
     for my $field (@$fields) {
+        my $desc = $field->{label};
+        # For date fields, add CCL date-range syntax instructions
+        if ( $field->{name} =~ /date/i ) {
+            $desc .= '. Use CCL date range syntax (no quotes, no < or > signs): '
+                   . 'exact year → "2005"; '
+                   . 'range → "2005-2014"; '
+                   . 'before 2005 (i.e. up to 2004) → "-2004"; '
+                   . 'from 2005 onwards → "2005-".';
+        }
         $properties{ $field->{name} } = {
             type        => 'string',
-            description => $field->{label},
+            description => $desc,
         };
     }
 
@@ -291,10 +300,21 @@ sub _escape_ccl_value {
 }
 
 # -------------------------------------------------------------------------
+# _is_ccl_date_range( $value ) -> bool
+# Returns true if the value looks like a CCL date range expression that
+# must NOT be quoted: e.g. "2005", "-2004", "2005-2014", "2005-"
+# -------------------------------------------------------------------------
+sub _is_ccl_date_range {
+    my ($val) = @_;
+    return $val =~ /^-?\d{4}(-\d{4})?$|^\d{4}-$/;
+}
+
+# -------------------------------------------------------------------------
 # _build_ccl_query( \%params ) -> $ccl_string
 # Converts structured search parameters into a CCL query string.
 # Iterates over whatever field names the LLM provided (which are the live
 # Koha search_field names) and builds fieldname:"value" expressions.
+# Date range values (e.g. -2004, 2005-2014, 2005) are passed unquoted.
 # -------------------------------------------------------------------------
 sub _build_ccl_query {
     my ($params) = @_;
@@ -303,7 +323,8 @@ sub _build_ccl_query {
     for my $field_name ( sort keys %$params ) {
         my $val = $params->{$field_name};
         next unless defined $val && $val ne '';
-        push @parts, $field_name . ':' . _escape_ccl_value($val);
+        my $ccl_val = _is_ccl_date_range($val) ? $val : _escape_ccl_value($val);
+        push @parts, $field_name . ':' . $ccl_val;
     }
 
     return @parts ? join( ' AND ', @parts ) : 'kw:*';
