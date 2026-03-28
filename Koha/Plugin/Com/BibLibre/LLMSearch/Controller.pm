@@ -50,7 +50,10 @@ sub chat {
     my $api_key  = $plugin->retrieve_data('api_key');
     my $base_url = $plugin->retrieve_data('base_url');
     my $model    = $plugin->retrieve_data('model');
-    my $prompt   = $plugin->retrieve_data('system_prompt');
+    my $prompt = $plugin->retrieve_data('system_prompt')
+               || $plugin->mbf_read('system_prompt.txt');
+    # Inject the live index list from Koha's search_field table
+    $prompt =~ s/\{\{SEARCH_INDEXES\}\}/_build_index_list_text()/e;
     my $max_tool_rounds = $plugin->retrieve_data('max_tool_rounds') // 0;
     my $use_function_calling = $max_tool_rounds > 0 ? 1 : 0;
 
@@ -199,10 +202,67 @@ sub _call_llm {
 }
 
 # -------------------------------------------------------------------------
+# _get_opac_biblio_search_fields() -> \@fields
+# Returns all search fields from Koha's search_field table that are
+# enabled for the OPAC and mapped to the biblios index.
+# -------------------------------------------------------------------------
+sub _get_opac_biblio_search_fields {
+    require Koha::SearchFields;
+
+    my @fields;
+    my $all = Koha::SearchFields->search( { opac => 1 }, { order_by => 'label' } );
+    while ( my $field = $all->next ) {
+        push @fields, { name => $field->name, label => $field->label }
+            if $field->is_mapped_biblios;
+    }
+    return \@fields;
+}
+
+# -------------------------------------------------------------------------
+# _build_index_list_text() -> $string
+# Builds a human-readable index list from live Koha search fields,
+# for injection into the system prompt via the {{SEARCH_INDEXES}} placeholder.
+# -------------------------------------------------------------------------
+sub _build_index_list_text {
+    my $fields = _get_opac_biblio_search_fields();
+
+    unless (@$fields) {
+        return 'No search indexes are currently configured for the OPAC in this Koha instance.';
+    }
+
+    my @lines = (
+        'Here are the available search field names '
+        . '(use as CCL prefix in queries, e.g. author:"tolkien"):',
+    );
+    for my $f (@$fields) {
+        push @lines, sprintf( '- %s: %s', $f->{name}, $f->{label} );
+    }
+    return join( "\n", @lines );
+}
+
+# -------------------------------------------------------------------------
 # _get_search_tools() -> \@tools
-# Returns the OpenAI-compatible tool definition for search_catalog.
+# Returns the OpenAI-compatible tool definition for search_catalog,
+# with parameters built dynamically from Koha's live search field list.
 # -------------------------------------------------------------------------
 sub _get_search_tools {
+    my $fields = _get_opac_biblio_search_fields();
+
+    my %properties;
+    for my $field (@$fields) {
+        $properties{ $field->{name} } = {
+            type        => 'string',
+            description => $field->{label},
+        };
+    }
+
+    # Safety net: if no fields are configured yet, expose a generic keyword param
+    unless (%properties) {
+        %properties = (
+            keyword => { type => 'string', description => 'General keyword search' },
+        );
+    }
+
     return [
         {
             type     => 'function',
@@ -214,41 +274,8 @@ sub _get_search_tools {
                     . 'If the count is 0, adjust the criteria (broader terms, fewer constraints, synonyms) and try again.',
                 parameters => {
                     type       => 'object',
-                    properties => {
-                        keyword => {
-                            type        => 'string',
-                            description => 'General keyword search across all fields',
-                        },
-                        author => {
-                            type        => 'string',
-                            description => 'Author name',
-                        },
-                        title => {
-                            type        => 'string',
-                            description => 'Title or words from the title',
-                        },
-                        subject => {
-                            type        => 'string',
-                            description => 'Subject heading or topic',
-                        },
-                        publisher => {
-                            type        => 'string',
-                            description => 'Publisher name',
-                        },
-                        series => {
-                            type        => 'string',
-                            description => 'Series title',
-                        },
-                        language => {
-                            type        => 'string',
-                            description => 'Language code (e.g. fre, eng, ger)',
-                        },
-                        pubdate => {
-                            type        => 'string',
-                            description => 'Publication year or range, e.g. "2020" or "2010-2020"',
-                        },
-                    },
-                    required => [],
+                    properties => \%properties,
+                    required   => [],
                 },
             },
         }
@@ -269,19 +296,18 @@ sub _escape_ccl_value {
 # -------------------------------------------------------------------------
 # _build_ccl_query( \%params ) -> $ccl_string
 # Converts structured search parameters into a CCL query string.
+# Iterates over whatever field names the LLM provided (which are the live
+# Koha search_field names) and builds fieldname:"value" expressions.
 # -------------------------------------------------------------------------
 sub _build_ccl_query {
     my ($params) = @_;
     my @parts;
 
-    push @parts, 'kw:'  . _escape_ccl_value( $params->{keyword} )   if $params->{keyword};
-    push @parts, 'au:'  . _escape_ccl_value( $params->{author} )     if $params->{author};
-    push @parts, 'ti:'  . _escape_ccl_value( $params->{title} )      if $params->{title};
-    push @parts, 'su:'  . _escape_ccl_value( $params->{subject} )    if $params->{subject};
-    push @parts, 'pb:'  . _escape_ccl_value( $params->{publisher} )  if $params->{publisher};
-    push @parts, 'se:'  . _escape_ccl_value( $params->{series} )     if $params->{series};
-    push @parts, 'ln:'  . _escape_ccl_value( $params->{language} )   if $params->{language};
-    push @parts, 'yr:'  . _escape_ccl_value( $params->{pubdate} )    if $params->{pubdate};
+    for my $field_name ( sort keys %$params ) {
+        my $val = $params->{$field_name};
+        next unless defined $val && $val ne '';
+        push @parts, $field_name . ':' . _escape_ccl_value($val);
+    }
 
     return @parts ? join( ' AND ', @parts ) : 'kw:*';
 }

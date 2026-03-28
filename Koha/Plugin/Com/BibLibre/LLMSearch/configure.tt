@@ -23,10 +23,21 @@
 	    <label for="welcome">Welcome message</label>
 	    <textarea name="welcome">[% welcome %]</textarea>
 	</div>
-	<div>
-	    <label for="system_prompt">System Prompt</label>
-	    <textarea name="system_prompt">[% system_prompt %]</textarea>
-	</div>
+	<details>
+	    <summary style="cursor:pointer; font-weight:bold;">&#9881; Expert: Custom system prompt</summary>
+	    <div class="hint" style="margin:.5em 0;">
+	        <strong>Warning:</strong> this prompt controls the LLM's entire behaviour.
+	        Modify only if you know what you are doing.<br/>
+	        The placeholder <code>{{SEARCH_INDEXES}}</code> will be replaced at runtime with
+	        the list of search indexes configured in Koha. Keep it in your prompt so the LLM
+	        knows which fields are available.<br/>
+	        Leave the textarea empty and save to reset to the built-in default prompt.
+	    </div>
+	    <div>
+	        <label for="system_prompt">System Prompt</label><br/>
+	        <textarea name="system_prompt" rows="20" cols="80">[% system_prompt %]</textarea>
+	    </div>
+	</details>
 	<div>
             <label for="model">Model to use</label>
 	    <input type="text" name="model" value="[% model %]"/>
