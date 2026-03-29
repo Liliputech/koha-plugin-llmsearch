@@ -421,9 +421,12 @@ sub _execute_search {
 sub _get_field_av_category {
     my ($field_name) = @_;
 
-    my $dbh = C4::Context->dbh;
+    my $dbh       = C4::Context->dbh;
+    my $marc_type = lc( C4::Context->preference('marcflavour') );
 
     # marc_field is stored as e.g. "245a" or "245$a"; handle both formats.
+    # Filter by marc_type so UNIMARC instances don't match MARC21 mappings
+    # (and vice-versa).
     my $sth = $dbh->prepare( q{
         SELECT DISTINCT mss.authorised_value
         FROM   search_field sf
@@ -434,11 +437,12 @@ sub _get_field_av_category {
                AND mss.tagsubfield = REPLACE(SUBSTRING(smm.marc_field, 4), '$', '')
         WHERE  sf.name              = ?
           AND  smm.index_name       = 'biblios'
+          AND  smm.marc_type        = ?
           AND  mss.authorised_value IS NOT NULL
           AND  mss.authorised_value != ''
         LIMIT 1
     } );
-    $sth->execute($field_name);
+    $sth->execute($field_name, $marc_type);
     my ($category) = $sth->fetchrow_array;
     return $category;
 }
