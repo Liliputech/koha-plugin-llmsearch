@@ -106,20 +106,36 @@ function populateChat() {
 // Normalize LLM output before sanitization:
 // 1. Use marked.js to convert Markdown (or pass-through HTML) to clean HTML
 // 2. Strip any absolute origin from href attributes so all links are relative.
-//    If the "host" part doesn't look like a real hostname (no dots, not localhost),
+//    Uses a temporary DOM element + URL API for robust parsing — no regex fragility.
+//    If the "host" part doesn't look like a real hostname (no dots, not localhost/IP),
 //    treat it as the first path segment instead of discarding it.
 //    e.g. http://localhost:8282/cgi-bin/... → /cgi-bin/...  (real host, strip it)
 //         http://cgi-bin/koha/...          → /cgi-bin/...  (fake host, keep it)
 function preprocessContent(content) {
     const html = marked.parse(content);
-    return html.replace(/href="https?:\/\/([^/"]+)(\/[^"]*)"/g, function(match, host, path) {
-        if (/\./.test(host) || /^localhost(:\d+)?$/.test(host)) {
-            // Real hostname or localhost — strip the origin, keep the path
-            return 'href="' + path + '"';
+    // Parse into a temporary DOM to fix links properly using the URL API
+    var temp = document.createElement('div');
+    temp.innerHTML = html;
+    temp.querySelectorAll('a[href]').forEach(function(a) {
+        var href = a.getAttribute('href');
+        // Normalise protocol-relative URLs (//host/path) so URL() can parse them
+        var absolute = /^\/\//.test(href) ? 'https:' + href : href;
+        try {
+            var url = new URL(absolute);
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+            var host = url.hostname;
+            if (/\./.test(host) || /^localhost$/.test(host)) {
+                // Real hostname or localhost — strip the origin, keep path + query + hash
+                a.setAttribute('href', url.pathname + url.search + url.hash);
+            } else {
+                // "Hostname" is actually a path segment (e.g. cgi-bin) — restore it
+                a.setAttribute('href', '/' + host + url.pathname + url.search + url.hash);
+            }
+        } catch (e) {
+            // Not a valid absolute URL — leave href unchanged
         }
-        // Looks like a path segment was mistaken for a host — restore it
-        return 'href="/' + host + path + '"';
     });
+    return temp.innerHTML;
 }
 
 function resetChat() {
