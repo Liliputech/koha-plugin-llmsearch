@@ -108,7 +108,7 @@ sub chat {
             );
         }
 
-        my $response_data = decode_json( $http_response->decoded_content );
+        my $response_data = decode_json( encode('UTF-8', $http_response->decoded_content(charset => 'UTF-8')) );
         my $choice        = $response_data->{choices}[0];
 
         if ( $debug_mode ) {
@@ -184,7 +184,7 @@ sub chat {
         my $fallback_http = _call_llm( $user_agent, $base_url, $api_key, $fallback_payload );
 
         if ( $fallback_http->is_success ) {
-            $final_response = decode_json( $fallback_http->decoded_content );
+            $final_response = decode_json( encode('UTF-8', $fallback_http->decoded_content(charset => 'UTF-8')) );
         }
         else {
             # Ultimate fallback if even this call fails
